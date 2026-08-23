@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KEMI SHOES — Commande</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,300..700,0..1&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #000000; --ink: #14120F; --terracotta: #D2531E; --terracotta-deep: #A83E14;
+    --bone: #FCF7F8; --bone-dim: #F3ECE6; --olive: #D2D388; --ok: #3f6b4a;
+    --line-dark: rgba(255,255,255,0.16); --line-light: rgba(20,18,15,0.14);
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { background: var(--bone); color: var(--ink); font-family: 'Archivo', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration:none; }
+  button, input, select { font: inherit; }
+  .display { font-family: 'Fraunces', serif; font-variation-settings: "SOFT" 60, "WONK" 1; font-weight: 560; letter-spacing: -0.01em; }
+  .wrap { max-width: 1080px; margin:0 auto; padding: 0 24px; }
+
+  .ph { position: relative; overflow:hidden; background: linear-gradient(150deg, #3a2c22 0%, #241b15 45%, #171310 100%); }
+
+  .btn { font-size:13px; font-weight:700; letter-spacing:0.03em; text-transform:uppercase; padding: 15px 26px; display:inline-block; text-align:center; border:none; width:100%; cursor:pointer; transition: transform .15s ease, background .2s ease, opacity .2s ease; }
+  .btn-primary { background: var(--terracotta); color: var(--bone); }
+  .btn-primary:hover { background: var(--terracotta-deep); }
+  .btn-primary[disabled] { opacity:0.35; cursor:not-allowed; }
+  .btn-primary[disabled]:hover { background:var(--terracotta); }
+  .btn-ghost { background:none; border:1px solid var(--ink); color:var(--ink); width:auto; }
+  .btn-ghost:hover { background:var(--ink); color:var(--bone); }
+  .link-btn { background:none; border:none; font-size:12px; text-decoration:underline; color: rgba(20,18,15,0.6); cursor:pointer; }
+
+  /* checkout header (simplified — no exit-prone nav) */
+  header.checkout-head { background: var(--void); color: var(--bone); padding: 16px 24px; display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-family:'Fraunces',serif; font-weight:600; font-size:18px; }
+  .logo span { color: var(--terracotta); }
+  .secure-badge { font-size:11px; color: rgba(252,247,248,0.7); display:flex; align-items:center; gap:6px; }
+
+  /* stepper */
+  .stepper-row { padding: 22px 24px 0; }
+  .stepper { display:flex; align-items:center; max-width: 420px; margin:0 auto; }
+  .step-dot { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--ink); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--bone); }
+  .step-dot.active { background: var(--ink); color: var(--bone); }
+  .step-dot.done { background: var(--ok); border-color: var(--ok); color: var(--bone); }
+  .step-line { flex:1; height:1.5px; background: var(--line-light); margin: 0 6px; }
+  .step-line.done { background: var(--ok); }
+  .step-labels { display:flex; max-width:420px; margin: 6px auto 0; justify-content:space-between; font-size:10.5px; color: rgba(20,18,15,0.5); }
+
+  .co-body { padding: 30px 24px 70px; }
+  .co-grid { display:flex; gap:44px; align-items:flex-start; flex-wrap:wrap; }
+  .co-main { flex: 1 1 480px; max-width:560px; }
+  .co-side { flex: 0 0 340px; position:sticky; top:20px; }
+
+  .co-step { display:none; }
+  .co-step.active { display:block; }
+
+  .guest-note { background: var(--bone-dim); font-size:12px; padding:12px 16px; margin-bottom:22px; display:flex; justify-content:space-between; align-items:center; }
+  .guest-note a { text-decoration:underline; color:var(--terracotta); font-weight:600; }
+
+  h2.co-title { font-size: clamp(1.2rem,2.2vw,1.5rem); margin-bottom:20px; }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color: rgba(20,18,15,0.55); margin-bottom:6px; }
+  .field input, .field select { width:100%; border:1px solid var(--line-light); background:var(--bone); padding:12px 14px; font-size:13.5px; }
+  .field input:focus, .field select:focus { outline:none; border-color:var(--ink); }
+  .field-row { display:flex; gap:12px; }
+  .field-row .field { flex:1; }
+
+  .delivery-card { border:1px solid var(--ink); padding:14px 16px; margin: 18px 0 24px; font-size:12.5px; }
+  .delivery-card b { display:block; font-family:'Fraunces',serif; font-size:14px; font-weight:600; margin-bottom:4px; }
+
+  /* payment options */
+  .pay-opt { border:1px solid var(--line-light); padding:16px; margin-bottom:12px; cursor:pointer; transition: border-color .15s ease; }
+  .pay-opt.sel { border: 1.5px solid var(--ink); background: var(--bone-dim); }
+  .pay-head { display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:600; }
+  .radio { width:17px; height:17px; border-radius:50%; border:1.5px solid var(--ink); flex-shrink:0; position:relative; }
+  .pay-opt.sel .radio::after { content:""; position:absolute; top:3px;left:3px;right:3px;bottom:3px; border-radius:50%; background:var(--ink); }
+  .pay-note { font-size:11px; color: rgba(20,18,15,0.5); margin-left:27px; margin-top:4px; }
+  .pay-fields { margin-top:12px; margin-left:27px; display:none; }
+  .pay-opt.sel .pay-fields { display:block; }
+
+  /* recap rows */
+  .recap-block { border:1px solid var(--line-light); padding:16px; margin-bottom:14px; }
+  .recap-block-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .recap-block-head span:first-child { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color: rgba(20,18,15,0.5); }
+  .recap-block-body { font-size:13.5px; }
+
+  .check-row { display:flex; gap:10px; align-items:flex-start; font-size:12.5px; color: rgba(20,18,15,0.65); margin: 20px 0; cursor:pointer; }
+  .check-row input { margin-top:2px; }
+
+  /* order summary card */
+  .summary-card { border:1px solid var(--line-light); padding:22px; }
+  .summary-card h3 { font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin-bottom:14px; }
+  .summary-item { display:flex; gap:10px; padding:8px 0; font-size:12px; align-items:center; }
+  .summary-item .ph { width:44px; height:44px; flex-shrink:0; }
+  .summary-item .si-name { font-weight:600; font-size:12.5px; }
+  .summary-item .si-var { color: rgba(20,18,15,0.5); font-size:11px; }
+  .summary-item .si-price { margin-left:auto; font-weight:600; font-size:12.5px; }
+  .summary-row { display:flex; justify-content:space-between; font-size:13px; color: rgba(20,18,15,0.7); padding: 5px 0; }
+  .summary-row.total { font-size:16px; font-weight:700; color:var(--ink); border-top:1px solid var(--line-light); margin-top:8px; padding-top:12px; }
+
+  /* step 4 confirmation */
+  .confirm-wrap { max-width:520px; margin:0 auto; text-align:center; }
+  .conf-icon { width:64px; height:64px; border-radius:50%; background:var(--ok); color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+  .conf-sub { font-size:13px; color: rgba(20,18,15,0.6); margin-top:8px; }
+  .order-num { font-family:'Fraunces',serif; font-size:16px; font-weight:600; margin-top:10px; }
+  .conf-summary { border:1px solid var(--line-light); text-align:left; padding:20px; margin: 26px 0; }
+  .account-prompt { border:1.5px dashed var(--terracotta); background: #fdf1ec; padding:20px; text-align:left; margin-bottom:16px; }
+  .account-prompt b { display:block; font-family:'Fraunces',serif; font-size:15px; margin-bottom:6px; }
+  .account-prompt p { font-size:12.5px; color: rgba(20,18,15,0.65); margin-bottom:14px; line-height:1.5; }
+
+  @media (max-width: 860px) {
+    .co-side { position:static; flex-basis:100%; }
+  }
+  @media (max-width: 560px) {
+    .co-body { padding: 22px 20px 50px; }
+    .stepper-row { padding: 18px 20px 0; }
+    .field-row { flex-direction:column; gap:0; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="checkout-head">
+    <div class="logo">KEMI<span>·</span>SHOES</div>
+    <div class="secure-badge">🔒 Paiement sécurisé</div>
+  </header>
+
+  <div class="stepper-row">
+    <div class="stepper">
+      <div class="step-dot active" id="dot1">1</div>
+      <div class="step-line" id="line1"></div>
+      <div class="step-dot" id="dot2">2</div>
+      <div class="step-line" id="line2"></div>
+      <div class="step-dot" id="dot3">3</div>
+    </div>
+    <div class="step-labels"><span>Livraison</span><span>Paiement</span><span>Confirmation</span></div>
+  </div>
+
+  <div class="co-body">
+    <div class="wrap" style="padding:0; max-width:1080px;">
+      <div class="co-grid">
+
+        <div class="co-main">
+
+          <!-- STEP 1 -->
+          <div class="co-step active" id="step1">
+            <div class="guest-note">Vous commandez en tant qu'invité <a href="#">Se connecter</a></div>
+            <h2 class="display co-title">Livraison</h2>
+
+            <div class="field"><label>Nom complet</label><input type="text" placeholder="Ex. Daril M."></div>
+            <div class="field-row">
+              <div class="field"><label>Téléphone (WhatsApp)</label><input type="text" placeholder="+237 6XX XXX XXX"></div>
+              <div class="field"><label>Email (optionnel)</label><input type="text" placeholder="nom@exemple.com"></div>
+            </div>
+
+            <div class="field"><label>Pays</label>
+              <select id="countrySelect">
+                <option>Cameroun</option>
+                <option>Côte d'Ivoire</option>
+                <option>France</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Ville / Région</label><input type="text" placeholder="Douala"></div>
+              <div class="field"><label>Quartier</label><input type="text" placeholder="Makepé"></div>
+            </div>
+            <div class="field"><label>Adresse précise / repère</label><input type="text" placeholder="Ex. non loin de…"></div>
+
+            <div class="delivery-card">
+              <b>🚚 Livraison estimée : 24–48h</b>
+              Douala/Yaoundé · 1 500 FCFA · paiement à la livraison disponible
+            </div>
+
+            <button class="btn btn-primary" onclick="goStep(2)">Continuer vers le paiement</button>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="co-step" id="step2">
+            <h2 class="display co-title">Paiement</h2>
+
+            <div class="pay-opt sel" data-pay="mm">
+              <div class="pay-head"><div class="radio"></div>Mobile Money (Orange / MTN)</div>
+              <div class="pay-note">Vous recevrez une demande de confirmation sur votre téléphone</div>
+              <div class="pay-fields"><div class="field"><label>Numéro Mobile Money</label><input type="text" placeholder="+237 6XX XXX XXX"></div></div>
+            </div>
+
+            <div class="pay-opt" data-pay="card">
+              <div class="pay-head"><div class="radio"></div>Carte bancaire (Visa / Mastercard)</div>
+              <div class="pay-fields">
+                <div class="field"><label>Numéro de carte</label><input type="text" placeholder="0000 0000 0000 0000"></div>
+                <div class="field-row">
+                  <div class="field"><label>Expiration</label><input type="text" placeholder="MM/AA"></div>
+                  <div class="field"><label>CVC</label><input type="text" placeholder="123"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pay-opt" data-pay="cod">
+              <div class="pay-head"><div class="radio"></div>Paiement à la livraison</div>
+              <div class="pay-note">Disponible uniquement au Cameroun</div>
+            </div>
+
+            <button class="btn btn-primary" style="margin-top:10px;" onclick="goStep(3)">Continuer vers le récapitulatif</button>
+            <button class="link-btn" style="display:block; margin:14px auto 0;" onclick="goStep(1)">← Modifier la livraison</button>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="co-step" id="step3">
+            <h2 class="display co-title">Récapitulatif</h2>
+
+            <div class="recap-block">
+              <div class="recap-block-head"><span>Adresse de livraison</span><a class="link-btn" onclick="goStep(1)">Modifier</a></div>
+              <div class="recap-block-body">Daril M. — Makepé, Douala, Cameroun</div>
+            </div>
+            <div class="recap-block">
+              <div class="recap-block-head"><span>Mode de paiement</span><a class="link-btn" onclick="goStep(2)">Modifier</a></div>
+              <div class="recap-block-body" id="recapPay">Mobile Money — Orange/MTN</div>
+            </div>
+            <div class="recap-block">
+              <div class="recap-block-head"><span>Articles (3)</span></div>
+              <div class="recap-block-body" style="color:rgba(20,18,15,0.6); font-size:12.5px;">Multicolore Black and White, Jani., GABI.</div>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" id="cguCheck" onchange="toggleConfirm()">
+              J'accepte les conditions générales de vente et la politique de confidentialité
+            </label>
+
+            <button class="btn btn-primary" id="confirmBtn" disabled onclick="goStep(4)">Confirmer ma commande</button>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="co-step" id="step4">
+            <div class="confirm-wrap">
+              <div class="conf-icon">✓</div>
+              <h2 class="display" style="font-size:1.6rem;">Merci pour votre commande !</h2>
+              <div class="conf-sub">Un message de confirmation a été envoyé sur WhatsApp</div>
+              <div class="order-num">Commande #KS-10234</div>
+
+              <div class="conf-summary">
+                <div class="summary-row"><span>Livraison estimée</span><span>24–48h</span></div>
+                <div class="summary-row"><span>Mode de paiement</span><span id="confPay">Mobile Money</span></div>
+                <div class="summary-row total"><span>Total payé</span><span>28 000f</span></div>
+              </div>
+
+              <button class="btn btn-ghost" style="width:100%; margin-bottom:22px;">💬 Suivre ma commande sur WhatsApp</button>
+
+              <div class="account-prompt">
+                <b>Créez votre compte en un clic</b>
+                <p>Retrouvez cette commande, suivez-la en temps réel et gagnez 5% sur votre prochain achat. Vos informations sont déjà pré-remplies.</p>
+                <button class="btn btn-primary">Créer mon compte</button>
+              </div>
+
+              <a class="link-btn" href="#">Continuer mes achats</a>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="co-side" id="sideSummary">
+          <div class="summary-card">
+            <h3>Votre commande</h3>
+            <div class="summary-item"><div class="ph"></div><div><div class="si-name">Multicolore B&amp;W</div><div class="si-var">Taille 40 · Noir/Blanc</div></div><div class="si-price">6 500f</div></div>
+            <div class="summary-item"><div class="ph"></div><div><div class="si-name">Jani.</div><div class="si-var">Taille 38 · Beige</div></div><div class="si-price">8 000f</div></div>
+            <div class="summary-item"><div class="ph"></div><div><div class="si-name">GABI.</div><div class="si-var">Taille 42 · Gris</div></div><div class="si-price">12 000f</div></div>
+            <div class="summary-row" style="margin-top:12px; border-top:1px solid var(--line-light); padding-top:12px;"><span>Sous-total</span><span>26 500f</span></div>
+            <div class="summary-row"><span>Livraison</span><span>1 500f</span></div>
+            <div class="summary-row total"><span>Total</span><span>28 000f</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  function goStep(n) {
+    document.querySelectorAll('.co-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step'+n).classList.add('active');
+
+    const dots = [1,2,3];
+    dots.forEach(i => {
+      const dot = document.getElementById('dot'+i);
+      if (!dot) return;
+      dot.classList.remove('active','done');
+      if (i < Math.min(n,3)) dot.classList.add('done');
+      else if (i === Math.min(n,3)) dot.classList.add('active');
+    });
+    const l1 = document.getElementById('line1'), l2 = document.getElementById('line2');
+    l1.classList.toggle('done', n > 1);
+    l2.classList.toggle('done', n > 2);
+
+    document.getElementById('sideSummary').style.display = (n === 4) ? 'none' : 'block';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  document.querySelectorAll('.pay-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('sel'));
+      opt.classList.add('sel');
+      const map = { mm: 'Mobile Money — Orange/MTN', card: 'Carte bancaire', cod: 'Paiement à la livraison' };
+      const label = map[opt.dataset.pay];
+      document.getElementById('recapPay').textContent = label;
+      document.getElementById('confPay').textContent = label;
+    });
+  });
+
+  function toggleConfirm() {
+    document.getElementById('confirmBtn').disabled = !document.getElementById('cguCheck').checked;
+  }
+</script>
+
+</body>
+</html>

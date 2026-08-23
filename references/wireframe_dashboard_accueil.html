@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>KEMI SHOES — Wireframe basse fidélité — Dashboard admin</title>
+<style>
+  :root {
+    --line: #9a9a9a;
+    --line-strong: #4a4a4a;
+    --panel: #f2f2f2;
+    --panel-dark: #e2e2e2;
+    --text: #2b2b2b;
+    --annot: #b5473a;
+    --annot-bg: #fdf1ef;
+    --ok: #3f6b4a;
+    --err: #a13b2f;
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    background: #ececec;
+    padding: 40px 16px 100px;
+  }
+  h1.page-title { text-align: center; font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 4px; }
+  p.page-sub { text-align: center; color: #777; font-size: 13px; margin-bottom: 30px; }
+  .legend { max-width: 1200px; margin: 0 auto 30px; background: #fff; border: 1px solid var(--line); padding: 14px 18px; font-size: 12px; color: #555; }
+  .legend b { color: var(--text); }
+
+  .placeholder-img {
+    background: repeating-linear-gradient(45deg, var(--panel), var(--panel) 8px, var(--panel-dark) 8px, var(--panel-dark) 16px);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    color: #888; font-size: 10px; text-align: center;
+  }
+
+  .frame-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; margin-bottom: 10px; text-align:center; font-weight:bold; }
+
+  .desktop-frame { width: 1180px; margin: 0 auto 60px; border: 2px solid var(--line-strong); background:#fff; display:flex; }
+  .sidebar { width: 210px; flex-shrink:0; border-right: 1px solid var(--line); background: #fafafa; }
+  .sidebar-logo { padding: 16px; font-size: 13px; font-weight: bold; border-bottom: 1px solid var(--line); }
+  .nav-item { padding: 11px 16px; font-size: 11.5px; color: #555; border-left: 3px solid transparent; }
+  .nav-item.active { border-left-color: var(--line-strong); background: #eee; font-weight: bold; color: var(--text); }
+  .nav-section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #999; padding: 14px 16px 4px; }
+
+  .main-area { flex:1; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .topbar-search { border:1px solid var(--line); font-size:11px; color:#999; padding:6px 12px; width:220px; }
+  .topbar-right { display:flex; gap:14px; align-items:center; font-size: 11px; }
+  .avatar { width:26px; height:26px; border-radius:50%; border:1px solid var(--line-strong); display:flex; align-items:center; justify-content:center; font-size:10px; }
+
+  .content-pad { padding: 20px 24px; }
+  .content-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .content-head h2 { font-size: 17px; }
+  .period-select { border:1px solid var(--line-strong); font-size:11px; padding:6px 12px; display:flex; gap:6px; align-items:center; }
+
+  .kpi-row { display:flex; gap:14px; margin-bottom: 26px; }
+  .kpi-card { flex:1; border:1px solid var(--line); padding: 14px 16px; }
+  .kpi-label { font-size: 10px; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin-bottom:8px; }
+  .kpi-value { font-size: 22px; font-weight:bold; }
+  .kpi-delta { font-size: 10px; margin-top:6px; }
+  .kpi-delta.up { color: var(--ok); }
+  .kpi-delta.down { color: var(--err); }
+
+  .panel { border:1px solid var(--line); margin-bottom: 20px; }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; padding: 12px 16px; border-bottom:1px solid var(--line); }
+  .panel-head h3 { font-size: 13px; }
+  .panel-head .see-all { font-size:10px; text-decoration:underline; color:#666; }
+  .panel-body { padding: 16px; }
+
+  .bar-row { display:flex; align-items:center; gap:10px; margin-bottom: 12px; }
+  .bar-rank { width:16px; font-size:10px; color:#999; flex-shrink:0; }
+  .bar-thumb { width:30px; height:30px; flex-shrink:0; }
+  .bar-name { width:130px; font-size:11px; flex-shrink:0; }
+  .bar-track { flex:1; background: var(--panel); height: 16px; position:relative; }
+  .bar-fill { background: var(--line-strong); height:100%; }
+  .bar-badge { font-size:10px; font-weight:bold; margin-left:8px; flex-shrink:0; width:70px; }
+
+  table.orders { width:100%; border-collapse: collapse; font-size: 11px; }
+  table.orders th { text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:#888; padding:6px 8px; border-bottom:1px solid var(--line); }
+  table.orders td { padding:9px 8px; border-bottom:1px solid var(--panel-dark); }
+  .status-badge { font-size:9px; padding:2px 8px; border-radius:10px; color:#fff; }
+  .status-badge.progress { background:#a6741f; }
+  .status-badge.done { background: var(--ok); }
+  .status-badge.cancel { background: var(--err); }
+
+  .alert-row { display:flex; gap:8px; align-items:flex-start; font-size:11px; padding:8px 0; border-bottom:1px solid var(--panel-dark); }
+  .alert-dot { width:6px; height:6px; border-radius:50%; background: var(--err); margin-top:4px; flex-shrink:0; }
+
+  .two-col { display:flex; gap:20px; }
+  .two-col > div { flex:1; }
+
+  .mobile-wrap { display:flex; justify-content:center; gap: 60px; flex-wrap:wrap; }
+  .phone { width: 360px; border: 2px solid var(--line-strong); border-radius: 24px; padding: 8px; background:#fff; }
+  .phone-screen { border:1px solid var(--line); border-radius:4px; overflow:hidden; }
+  .m-topbar { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .m-topbar b { font-size:12px; }
+  .m-block { padding: 12px 14px; border-bottom: 1px dashed var(--line); }
+  .m-label { font-size:9px; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin-bottom:8px; font-weight:bold; }
+
+  .kpi-scroll { display:flex; gap:10px; overflow-x:auto; }
+  .kpi-mini { flex:0 0 130px; border:1px solid var(--line); padding:10px; }
+  .kpi-mini .kpi-label { font-size:9px; }
+  .kpi-mini .kpi-value { font-size:17px; }
+
+  .m-prod-card { border:1px solid var(--line); padding:10px; margin-bottom:8px; display:flex; gap:10px; align-items:center; }
+  .m-prod-card .placeholder-img { width:40px; height:40px; flex-shrink:0; }
+  .m-prod-info { flex:1; }
+  .m-prod-name { font-size:11.5px; font-weight:bold; }
+  .m-prod-sales { font-size:10px; color:#777; }
+  .trend { font-size:11px; font-weight:bold; display:flex; align-items:center; gap:3px; flex-shrink:0; }
+  .trend.up { color: var(--ok); }
+  .trend.down { color: var(--err); }
+  .trend.flat { color: #999; }
+
+  .m-order-card { border:1px solid var(--line); padding:9px 11px; margin-bottom:7px; font-size:10.5px; }
+  .m-order-top { display:flex; justify-content:space-between; margin-bottom:4px; }
+
+  .bottom-nav { display:flex; border-top:1px solid var(--line-strong); }
+  .bottom-nav div { flex:1; text-align:center; padding:9px 4px; font-size:9px; color:#666; }
+  .bottom-nav div.active { color: var(--text); font-weight:bold; border-top:2px solid var(--line-strong); margin-top:-1px; }
+
+  .annot { max-width: 230px; font-size: 11px; line-height: 1.4; color: var(--annot); background: var(--annot-bg); border-left: 3px solid var(--annot); padding: 6px 8px; margin-bottom: 6px; }
+  .annot b { display:block; font-size:11px; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.03em; }
+</style>
+</head>
+<body>
+
+  <h1 class="page-title">KEMI SHOES — Wireframe basse fidélité</h1>
+  <p class="page-sub">Dashboard admin · Vue d'ensemble · gris = placeholder, aucune couleur finale appliquée à ce stade</p>
+
+  <div class="legend">
+    <b>Note de lecture :</b> structure et contenu uniquement. Le graphique en barres (desktop) et les cartes à tendance (mobile) utilisent la même donnée — nombre de ventes par produit + variation vs période précédente — seul le rendu change selon l'écran, conformément à la structure validée.
+  </div>
+
+  <div class="frame-label">Desktop</div>
+  <div class="desktop-frame">
+
+    <div class="sidebar">
+      <div class="sidebar-logo">KEMI SHOES — Admin</div>
+      <div class="nav-item active">Vue d'ensemble</div>
+      <div class="nav-item">Commandes</div>
+      <div class="nav-item">Produits</div>
+      <div class="nav-item">Clients</div>
+      <div class="nav-section-label">Configuration</div>
+      <div class="nav-item">Livraison</div>
+      <div class="nav-item">Paiement</div>
+      <div class="nav-item">Avis clients</div>
+      <div class="nav-item">Contenu &amp; traductions</div>
+      <div class="nav-item">Paramètres</div>
+    </div>
+
+    <div class="main-area">
+      <div class="topbar">
+        <div class="topbar-search">🔍 Rechercher…</div>
+        <div class="topbar-right">
+          <span>🔔</span>
+          <div class="avatar">D</div>
+          <span>Daril</span>
+        </div>
+      </div>
+
+      <div class="content-pad">
+        <div class="content-head">
+          <h2>Vue d'ensemble</h2>
+          <div class="period-select">30 derniers jours ▾</div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-label">Commandes</div>
+            <div class="kpi-value">128</div>
+            <div class="kpi-delta up">▲ +12% vs période précédente</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Ventes (unités)</div>
+            <div class="kpi-value">164</div>
+            <div class="kpi-delta up">▲ +8%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Chiffre d'affaires</div>
+            <div class="kpi-value">2 340 000f</div>
+            <div class="kpi-delta down">▼ −3%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Panier moyen</div>
+            <div class="kpi-value">18 300f</div>
+            <div class="kpi-delta up">▲ +5%</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Top 10 produits</h3><span class="see-all">Voir tout →</span></div>
+          <div class="panel-body">
+            <div class="bar-row"><span class="bar-rank">1</span><div class="placeholder-img bar-thumb"></div><span class="bar-name">Multicolore B&amp;W</span><div class="bar-track"><div class="bar-fill" style="width:92%;"></div></div><span class="bar-badge">42 ventes</span></div>
+            <div class="bar-row"><span class="bar-rank">2</span><div class="placeholder-img bar-thumb"></div><span class="bar-name">Jani.</span><div class="bar-track"><div class="bar-fill" style="width:78%;"></div></div><span class="bar-badge">36 ventes</span></div>
+            <div class="bar-row"><span class="bar-rank">3</span><div class="placeholder-img bar-thumb"></div><span class="bar-name">GABI.</span><div class="bar-track"><div class="bar-fill" style="width:60%;"></div></div><span class="bar-badge">28 ventes</span></div>
+            <div class="bar-row"><span class="bar-rank">4</span><div class="placeholder-img bar-thumb"></div><span class="bar-name">Spartiate</span><div class="bar-track"><div class="bar-fill" style="width:45%;"></div></div><span class="bar-badge">21 ventes</span></div>
+            <div class="bar-row"><span class="bar-rank">5</span><div class="placeholder-img bar-thumb"></div><span class="bar-name">Karibu.</span><div class="bar-track"><div class="bar-fill" style="width:34%;"></div></div><span class="bar-badge">16 ventes</span></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h3>Commandes récentes</h3><span class="see-all">Voir tout →</span></div>
+            <div class="panel-body" style="padding:0;">
+              <table class="orders">
+                <tr><th>Commande</th><th>Client</th><th>Statut</th><th>Total</th></tr>
+                <tr><td>#KS-10234</td><td>Daril M.</td><td><span class="status-badge progress">En livraison</span></td><td>28 000f</td></tr>
+                <tr><td>#KS-10233</td><td>Aïcha B.</td><td><span class="status-badge done">Livrée</span></td><td>12 000f</td></tr>
+                <tr><td>#KS-10232</td><td>Junior K.</td><td><span class="status-badge cancel">Annulée</span></td><td>15 000f</td></tr>
+                <tr><td>#KS-10231</td><td>Steve N.</td><td><span class="status-badge done">Livrée</span></td><td>8 000f</td></tr>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Alertes</h3></div>
+            <div class="panel-body">
+              <div class="alert-row"><div class="alert-dot"></div>Taille 42 en rupture — « Multicolore B&amp;W »</div>
+              <div class="alert-row"><div class="alert-dot"></div>Taille 43 en rupture — « GABI. »</div>
+              <div class="alert-row"><div class="alert-dot"></div>2 demandes de personnalisation en attente</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-label">Mobile</div>
+  <div class="mobile-wrap">
+
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="m-topbar"><b>Vue d'ensemble</b><span>☰</span></div>
+
+        <div class="m-block">
+          <div class="m-label">Période</div>
+          <div class="period-select" style="display:inline-flex;">30 derniers jours ▾</div>
+        </div>
+
+        <div class="m-block">
+          <div class="m-label">Indicateurs clés</div>
+          <div class="kpi-scroll">
+            <div class="kpi-mini"><div class="kpi-label">Commandes</div><div class="kpi-value">128</div><div class="kpi-delta up">▲ +12%</div></div>
+            <div class="kpi-mini"><div class="kpi-label">Ventes</div><div class="kpi-value">164</div><div class="kpi-delta up">▲ +8%</div></div>
+            <div class="kpi-mini"><div class="kpi-label">CA</div><div class="kpi-value">2,34M</div><div class="kpi-delta down">▼ −3%</div></div>
+          </div>
+        </div>
+
+        <div class="m-block">
+          <div class="m-label">Top 10 produits</div>
+
+          <div class="m-prod-card">
+            <div class="placeholder-img"></div>
+            <div class="m-prod-info"><div class="m-prod-name">Multicolore B&amp;W</div><div class="m-prod-sales">42 ventes</div></div>
+            <div class="trend up">▲ +18%</div>
+          </div>
+          <div class="m-prod-card">
+            <div class="placeholder-img"></div>
+            <div class="m-prod-info"><div class="m-prod-name">Jani.</div><div class="m-prod-sales">36 ventes</div></div>
+            <div class="trend flat">— 0%</div>
+          </div>
+          <div class="m-prod-card">
+            <div class="placeholder-img"></div>
+            <div class="m-prod-info"><div class="m-prod-name">GABI.</div><div class="m-prod-sales">28 ventes</div></div>
+            <div class="trend down">▼ −9%</div>
+          </div>
+        </div>
+
+        <div class="m-block" style="border-bottom:none;">
+          <div class="m-label">Commandes récentes</div>
+          <div class="m-order-card">
+            <div class="m-order-top"><b>#KS-10234</b><span class="status-badge progress">En livraison</span></div>
+            Daril M. · 28 000f
+          </div>
+          <div class="m-order-card">
+            <div class="m-order-top"><b>#KS-10233</b><span class="status-badge done">Livrée</span></div>
+            Aïcha B. · 12 000f
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="active">Accueil</div>
+          <div>Commandes</div>
+          <div>Produits</div>
+          <div>Plus</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px; max-width:280px; padding-top:20px;">
+      <div class="annot"><b>KPI en scroll horizontal</b>Évite d'empiler 4 cartes en hauteur sur un petit écran.</div>
+      <div class="annot"><b>Cartes produit + tendance</b>Flèche verte = hausse, rouge = baisse, tiret gris = stable (seuil ±3% pour éviter le bruit statistique) — vs la période précédente.</div>
+      <div class="annot"><b>Navigation basse</b>Accès rapide aux 3 sections les plus utilisées, le reste via « Plus ».</div>
+    </div>
+  </div>
+
+</body>
+</html>
