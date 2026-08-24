@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { setStaticParamsLocale } from 'next-international/server';
 import { I18nProviderClient } from "@/locales/client";
-import { getStaticParams } from '.@/locales/server'
+import { getStaticParams } from '@/locales/server'
 
 const locales = ["fr", "en"] as const;
 
