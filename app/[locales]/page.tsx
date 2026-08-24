@@ -33,20 +33,19 @@ export default async function Home() {
   return (
     <main>
       <section className="hero-grid">
-        <div className="hero-left">
-          <div className="hero-copy">
+        <div className="hero-copy">
           <div className="hero-mobile-bg" aria-hidden="true">{["atelier.jpg", "mule_à_bride_diagonale_et_boucle.jpg", "sandales_à_bague_d_orteil.jpg", "atelier_1.jpg"].map((image, index) => <div className="hero-bg-slide" key={image}><Image src={`/images_demo/${image}`} alt="" fill priority={index === 0} sizes="100vw" /></div>)}<div className="hero-mobile-overlay" /></div>
           <span className="eyebrow">Atelier KEMI SHOES — Douala, Cameroun</span>
           <h1>Des sandales <em>façonnées</em><br />à la main, à Douala.</h1>
           <p>{t("home.intro")}</p>
           <div className="hero-actions"><Link href="/boutique" className={cn(buttonVariants({ size: "lg", variant: "default" }))}>{t("home.collection")} <ArrowUpRight data-icon="inline-end" /></Link><Link href="/notre-histoire" className={cn(buttonVariants({ size: "lg", variant: "outline" }), "hero-secondary-button")}>{t("home.knowHow")} <ArrowUpRight data-icon="inline-end" /></Link></div>
-          </div>
-          <div className="hero-categories">
-            <Link href="/boutique?categorie=homme" className="hero-category category-men"><Image src="/categories_hommes.jpg" alt="Collection de sandales homme KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 35vw" /><span>{t("home.men")} <ArrowUpRight aria-hidden="true" /></span></Link>
-            <Link href="/boutique?categorie=femme" className="hero-category category-women"><Image src="/categories_femme.jpg" alt="Collection de sandales femme KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 35vw" /><span>{t("home.women")} <ArrowUpRight aria-hidden="true" /></span></Link>
-          </div>
         </div>
-        <div className="hero-atelier"><Image src="/images_demo/atelier.jpg" alt="Artisan KEMI SHOES dans l'atelier de Douala" fill priority sizes="(max-width: 860px) 100vw, 54vw" /><span className="play-indicator"><Play aria-hidden="true" /></span><span className="image-caption">Atelier — Douala</span><span className="stitched-tag hero-tag">{t("home.handmade")}</span></div>
+        <div className="hero-mosaic">
+          <div className="hero-tile"><Image src="/images_demo/sandale_spartiate_en_cuir_à_rivets_et_bride_cheville.jpg" alt="Sandale KEMI SHOES portée avec style" fill priority sizes="(max-width: 860px) 100vw, 16vw" /><span><b>01</b> Portées avec style<small>L&apos;élégance au quotidien</small></span></div>
+          <div className="hero-tile"><Image src="/images_demo/mule_à_bride_diagonale_et_boucle.jpg" alt="Sandales KEMI SHOES en cuir avec boucles" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>02</b> Design intemporel<small>Des modèles pensés pour durer</small></span></div>
+          <div className="hero-tile"><Image src="/images_demo/atelier_3.jpg" alt="Savoir-faire artisanal KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>03</b> Savoir-faire local<small>Le geste, la précision, la passion</small></span></div>
+          <div className="hero-tile"><Image src="/images_demo/fondatrice_kemi_shoes.jpg" alt="L'esprit Douala de KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>04</b> Esprit Douala<small>Notre ville, notre inspiration</small></span></div>
+        </div>
       </section>
 
       <section className="section home-section"><div className="section-heading"><h2>{t("home.choosePair")}</h2><Link href="/boutique" className="text-link dark-link">{t("home.viewAll")} <ArrowUpRight aria-hidden="true" /></Link></div><div className="home-category-grid">{categories.map((category) => <Link href={category.href} className="home-category-card" key={category.key}><Image src={category.image} alt={t(`home.categories.${category.key}` as "home.categories.men")} fill sizes="(max-width: 700px) 100vw, 25vw" /><span>{t(`home.categories.${category.key}` as "home.categories.men")}</span></Link>)}</div></section>
