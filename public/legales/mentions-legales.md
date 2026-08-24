@@ -68,7 +68,7 @@ Toutefois, la perception des couleurs peut varier selon l'écran, le navigateur,
 
 Les sandales étant fabriquées artisanalement, certaines variations mineures de texture, de grain, de teinte ou de finition peuvent apparaître d'une pièce à l'autre. Ces variations peuvent constituer une caractéristique normale d'une fabrication artisanale et de l'utilisation de matières naturelles ; elles ne sont pas, à elles seules, la preuve d'un défaut.
 
-En revanche, lorsqu'un produit présente une non-conformité réelle par rapport à la commande ou un défaut relevant des garanties applicables, le client conserve les droits prévus par la législation et les présentes CGV.
+En revanche, lorsqu'un produit présente une non-conformité réelle par rapport à la commande ou un défaut relevant des garanties applicables, le client conserve les droits prévus par la législation et les présentes **[Conditions Générales de Vente](/cgv)**.
 
 ## 7. Responsabilité relative au contenu
 
@@ -107,10 +107,7 @@ Les plateformes sociales sont exploitées par leurs opérateurs respectifs. Leur
 
 KEMI SHOES traite certaines données à caractère personnel dans le cadre de l'exploitation du site et de la gestion des commandes.
 
-Les modalités de collecte, les finalités, les catégories de données, les durées de conservation, les destinataires et les droits des personnes sont détaillés dans la page **Politique de confidentialité** accessible à l'adresse :
-
-`/confidentialite`
-
+Les modalités de collecte, les finalités, les catégories de données, les durées de conservation, les destinataires et les droits des personnes sont détaillés dans la page **[Politique de confidentialité](/confidentialite)**
 KEMI SHOES tient compte notamment de la **loi n°2024/017 du 23 décembre 2024 relative à la protection des données à caractère personnel au Cameroun**, qui encadre les traitements de données personnelles et les droits des personnes concernées.
 
 ## 11. Cookies et technologies similaires
@@ -125,7 +122,7 @@ Les catégories effectivement utilisées doivent être indiquées dans la politi
 
 Le site est exploité depuis le Cameroun. Les informations légales relatives au site sont interprétées conformément au droit camerounais, sous réserve des règles impératives éventuellement applicables au consommateur situé dans une autre juridiction.
 
-Les relations contractuelles relatives aux commandes sont régies selon les stipulations des **Conditions Générales de Vente**.
+Les relations contractuelles relatives aux commandes sont régies selon les stipulations des **[Conditions Générales de Vente](/cgv)**.
 
 ## 13. Réclamations et règlement des différends
 

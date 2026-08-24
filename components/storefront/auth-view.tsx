@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createOtpChallenge } from "@/lib/auth";
+import { createOtpChallenge, createSessionToken } from "@/lib/auth";
 
 type Labels = Record<string, string>;
 
@@ -33,7 +33,7 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
       <div className="auth-field"><label>{labels.phone}</label><div className="auth-phone"><select aria-label={labels.countryCode}><option>+237</option><option>+225</option><option>+33</option></select><input value={phone} placeholder={labels.phonePlaceholder} onChange={(event) => setPhone(event.target.value)} /></div>{error && <span className="auth-error">{error}</span>}</div>
       <button className="auth-primary" onClick={requestCode}>{labels.receiveCode}</button>
       <button className="auth-email-toggle" onClick={() => setEmailOpen(true)}>{labels.emailToggle}</button>
-    </> : <div className="auth-email-fields"><AuthField label={labels.email} placeholder={labels.emailPlaceholder} /><AuthField label={labels.password} placeholder={labels.passwordPlaceholder} type="password" /><button className="auth-primary">{labels.continue}</button><button className="auth-email-toggle" onClick={() => setEmailOpen(false)}>{labels.phone}</button></div>}
+    </> : <div className="auth-email-fields"><AuthField label={labels.email} placeholder={labels.emailPlaceholder} /><AuthField label={labels.password} placeholder={labels.passwordPlaceholder} type="password" /><button className="auth-primary" onClick={() => { createSessionToken(); router.push(`/${locale}/boutique`); }}>{labels.continue}</button><button className="auth-email-toggle" onClick={() => setEmailOpen(false)}>{labels.phone}</button></div>}
     <p className="auth-fineprint">{labels.fineprint} <Link href={`/${locale}/cgv`}>{labels.terms}</Link> {labels.and} <Link href={`/${locale}/confidentialite`}>{labels.privacy}</Link>.</p>
     <div className="auth-guest">{labels.guest} <Link href={`/${locale}/boutique`}>{labels.continueGuest}</Link></div>
   </div></div></main>;

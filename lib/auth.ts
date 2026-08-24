@@ -1,5 +1,7 @@
 export const OTP_COOKIE = "kemi-otp-challenge";
+export const SESSION_COOKIE = "kemi-session";
 export const OTP_VALIDITY_SECONDS = 45;
+export const SESSION_VALIDITY_SECONDS = 60 * 60 * 24 * 30;
 
 export type OtpChallenge = {
   token: string;
@@ -38,6 +40,24 @@ export function createOtpChallenge(phone: string, mode: OtpChallenge["mode"], na
 
 export function clearOtpChallenge() {
   document.cookie = `${OTP_COOKIE}=; path=/; max-age=0; samesite=lax`;
+}
+
+function encodeBase64Url(value: string) {
+  return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export function createSessionToken(phone?: string) {
+  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_VALIDITY_SECONDS;
+  const header = encodeBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const payload = encodeBase64Url(JSON.stringify({ sub: phone ?? "guest", iat: Math.floor(Date.now() / 1000), exp: expiresAt, jti: crypto.randomUUID() }));
+  const signature = encodeBase64Url(crypto.randomUUID());
+  const token = `${header}.${payload}.${signature}`;
+  document.cookie = `${SESSION_COOKIE}=${token}; path=/; max-age=${SESSION_VALIDITY_SECONDS}; samesite=lax`;
+  return token;
+}
+
+export function clearSession() {
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
 }
 
 export function maskPhone(phone: string) {
