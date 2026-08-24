@@ -34,17 +34,17 @@ export default async function Home() {
     <main>
       <section className="hero-grid">
         <div className="hero-copy">
-          <div className="hero-mobile-bg" aria-hidden="true">{["atelier.jpg", "mule_à_bride_diagonale_et_boucle.jpg", "sandales_à_bague_d_orteil.jpg", "atelier_1.jpg"].map((image, index) => <div className="hero-bg-slide" key={image}><Image src={`/images_demo/${image}`} alt="" fill priority={index === 0} sizes="100vw" /></div>)}<div className="hero-mobile-overlay" /></div>
+          <div className="hero-mobile-bg" aria-hidden="true">{["hero_1.jpg", "hero_2.jpg", "hero_3.jpg", "hero_4.jpg"].map((image, index) => <div className="hero-bg-slide" key={image}><Image src={`/${image}`} alt={`Image hero ${index + 1}`} fill priority={index === 0} sizes="100vw" /></div>)}<div className="hero-mobile-overlay" /></div>
           <span className="eyebrow">Atelier KEMI SHOES — Douala, Cameroun</span>
           <h1>Des sandales <em>façonnées</em><br />à la main, à Douala.</h1>
           <p>{t("home.intro")}</p>
           <div className="hero-actions"><Link href="/boutique" className={cn(buttonVariants({ size: "lg", variant: "default" }))}>{t("home.collection")} <ArrowUpRight data-icon="inline-end" /></Link><Link href="/notre-histoire" className={cn(buttonVariants({ size: "lg", variant: "outline" }), "hero-secondary-button")}>{t("home.knowHow")} <ArrowUpRight data-icon="inline-end" /></Link></div>
         </div>
         <div className="hero-mosaic">
-          <div className="hero-tile"><Image src="/images_demo/sandale_spartiate_en_cuir_à_rivets_et_bride_cheville.jpg" alt="Sandale KEMI SHOES portée avec style" fill priority sizes="(max-width: 860px) 100vw, 16vw" /><span><b>01</b> Portées avec style<small>L&apos;élégance au quotidien</small></span></div>
-          <div className="hero-tile"><Image src="/images_demo/mule_à_bride_diagonale_et_boucle.jpg" alt="Sandales KEMI SHOES en cuir avec boucles" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>02</b> Design intemporel<small>Des modèles pensés pour durer</small></span></div>
-          <div className="hero-tile"><Image src="/images_demo/atelier_3.jpg" alt="Savoir-faire artisanal KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>03</b> Savoir-faire local<small>Le geste, la précision, la passion</small></span></div>
-          <div className="hero-tile"><Image src="/images_demo/fondatrice_kemi_shoes.jpg" alt="L'esprit Douala de KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>04</b> Esprit Douala<small>Notre ville, notre inspiration</small></span></div>
+          <div className="hero-tile"><Image src="/hero_1.jpg" alt="Sandale KEMI SHOES portée avec style" fill priority sizes="(max-width: 860px) 100vw, 16vw" /><span><b>01</b> Portées avec style<small>L&apos;élégance au quotidien</small></span></div>
+          <div className="hero-tile"><Image src="/hero_2.jpg" alt="Sandales KEMI SHOES en cuir avec boucles" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>02</b> Design intemporel<small>Des modèles pensés pour durer</small></span></div>
+          <div className="hero-tile"><Image src="/hero_3.jpg" alt="Savoir-faire artisanal KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>03</b> Savoir-faire local<small>Le geste, la précision, la passion</small></span></div>
+          <div className="hero-tile"><Image src="/hero_4.jpg" alt="L'esprit Douala de KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 16vw" /><span><b>04</b> Esprit Douala<small>Notre ville, notre inspiration</small></span></div>
         </div>
       </section>
 
@@ -57,6 +57,8 @@ export default async function Home() {
       <section className="proof-section"><div className="proof-heading"><div><span className="eyebrow">{t("home.reviewsEyebrow")}</span><h2>{t("home.reviewsTitle")}</h2></div><div className="proof-stat"><strong>78K</strong><span>{t("home.followers")}</span></div></div><div className="reviews-track">{[...reviews, ...reviews].map((review, index) => <article className="review-card" key={`${review}-${index}`}><div className="stars">★★★★★</div><p>« {review} »</p><small>{t("home.verified")}</small></article>)}</div></section>
 
       <section className="about-section section"><div className="about-media"><Image src="/images_demo/fondatrice_kemi_shoes.jpg" alt="Marthe Nyobe, fondatrice de KEMI SHOES" fill sizes="(max-width: 860px) 100vw, 50vw" /></div><div className="about-copy"><span className="eyebrow">KEMI SHOES</span><h2>{t("home.aboutTitle")}</h2><p>{t("home.aboutText")}</p><Link href="/notre-histoire" className={cn(buttonVariants(), "about-button")}>{t("home.fullStory")} <ArrowUpRight data-icon="inline-end" /></Link></div></section>
+
+      <section className="find-pair-section"><div className="find-pair-inner"><div className="find-pair-heading"><div><span className="eyebrow">KEMI / COLLECTION</span><h2>{t("home.findPairTitle")}</h2></div><p>{t("home.findPairText")}</p></div><div className="find-pair-grid">{categories.map((category, index) => <Link href={category.href} className={`find-pair-link find-pair-link-${index + 1}`} key={category.key}><span>{t(`home.categories.${category.key}` as "home.categories.men")}</span><ArrowUpRight aria-hidden="true" /></Link>)}</div><Link href="/boutique" className={cn(buttonVariants({ size: "lg" }), "find-pair-cta")}>{t("home.exploreCollection")} <ArrowUpRight data-icon="inline-end" /></Link></div></section>
     </main>
   );
 }
