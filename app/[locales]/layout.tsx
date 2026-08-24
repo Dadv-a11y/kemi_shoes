@@ -6,7 +6,6 @@ import { getStaticParams } from '@/locales/server'
 const locales = ["fr", "en"] as const;
 
 export function generateStaticParams() {
-  return locales.map((locale) => ({ locales: locale }));
   return getStaticParams();
 }
 
