@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KEMI SHOES — Mon panier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,300..700,0..1&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #000000;
+    --ink: #14120F;
+    --terracotta: #D2531E;
+    --terracotta-deep: #A83E14;
+    --bone: #FCF7F8;
+    --bone-dim: #F3ECE6;
+    --olive: #D2D388;
+    --line-dark: rgba(255,255,255,0.16);
+    --line-light: rgba(20,18,15,0.14);
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bone); color: var(--ink); font-family: 'Archivo', sans-serif; -webkit-font-smoothing: antialiased; }
+  img, .ph { display:block; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor:pointer; }
+  .display { font-family: 'Fraunces', serif; font-variation-settings: "SOFT" 60, "WONK" 1; font-weight: 560; letter-spacing: -0.01em; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  .ph {
+    position: relative; overflow:hidden;
+    background: radial-gradient(120% 140% at 15% 0%, rgba(255,255,255,0.10), transparent 55%), linear-gradient(150deg, #3a2c22 0%, #241b15 45%, #171310 100%);
+  }
+  .ph::after { content:""; position:absolute; top:0;left:0;right:0;bottom:0; background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 7px); }
+
+  .btn { font-size:13px; font-weight:700; letter-spacing:0.03em; text-transform:uppercase; padding: 15px 26px; display:inline-block; text-align:center; border:none; width:100%; transition: transform .15s ease, background .2s ease; }
+  .btn-primary { background: var(--terracotta); color: var(--bone); }
+  .btn-primary:hover { background: var(--terracotta-deep); }
+  .btn-outline { border: 1px solid var(--ink); color: var(--ink); background:none; }
+  .btn-outline:hover { background: var(--ink); color: var(--bone); }
+
+  .announce { background: var(--ink); color: var(--bone); text-align:center; font-size:11px; letter-spacing:0.04em; padding: 8px 12px; }
+  header.site { background: var(--void); color: var(--bone); position: sticky; top:0; z-index: 50; border-bottom: 1px solid var(--line-dark); }
+  .nav-row { display:flex; align-items:center; justify-content:space-between; padding: 16px 24px; }
+  .logo { font-family:'Fraunces',serif; font-weight:600; font-size:20px; letter-spacing:0.02em; }
+  .logo span { color: var(--terracotta); }
+  .nav-links { display:flex; gap:28px; font-size:13px; font-weight:500; }
+  .nav-links a { opacity:0.85; }
+  .nav-links a:hover { opacity:1; color: var(--terracotta); }
+  .nav-icons { display:flex; gap:16px; align-items:center; font-size:14px; }
+  .burger { display:none; font-size:20px; background:none; border:none; color:var(--bone); }
+
+  .demo-switch { background:#efe6da; text-align:center; padding:10px; font-size:11.5px; }
+  .demo-switch button { border:1px solid var(--ink); background:none; padding:6px 14px; margin:0 4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; }
+  .demo-switch button.active { background:var(--ink); color:var(--bone); }
+
+  .page-title-row { padding: 28px 24px 0; display:flex; align-items:center; justify-content:space-between; max-width:1180px; margin:0 auto; }
+  .page-title { font-size: clamp(1.6rem,2.8vw,2.1rem); }
+  .clear-link { font-size:11.5px; text-decoration:underline; color: rgba(20,18,15,0.55); }
+
+  .zone-bar { display:flex; align-items:center; justify-content:space-between; background: var(--bone-dim); margin: 20px 24px 0; padding: 12px 18px; font-size:12.5px; border-radius:2px; max-width:1132px; margin-left:auto; margin-right:auto; }
+  .zone-bar b { font-weight:700; }
+  .zone-edit { font-size:11.5px; text-decoration:underline; color: var(--ink); }
+
+  .cart-section { padding: 24px 24px 60px; }
+  .cart-grid { display:flex; gap:44px; align-items:flex-start; flex-wrap:wrap; }
+  .cart-items { flex: 1 1 520px; }
+  .cart-summary-col { flex: 0 0 340px; position:sticky; top: 90px; }
+
+  .cart-item { display:flex; gap:16px; padding: 20px 40px 20px 0; border-bottom:1px solid var(--line-light); position:relative; }
+  .cart-item .ph { width:96px; height:96px; flex-shrink:0; }
+  .item-info { flex:1; }
+  .item-name { font-family:'Fraunces',serif; font-weight:600; font-size:15px; padding-right:20px; }
+  .item-variant { font-size:12px; color: rgba(20,18,15,0.55); margin-top:3px; }
+  .item-variant .custom { color: var(--terracotta); }
+  .item-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:14px; }
+  .qty-box { display:flex; align-items:center; border:1px solid var(--ink); }
+  .qty-box button { width:30px; background:none; border:none; font-size:14px; }
+  .qty-box span { width:26px; text-align:center; font-size:12.5px; }
+  .item-price { font-size:14px; font-weight:700; }
+  .remove-x { position:absolute; top:20px; right:0; background:none; border:1px solid transparent; font-size:14px; color: rgba(20,18,15,0.4); width:26px; height:26px; border-radius:50%; }
+  .remove-x:hover { color: var(--terracotta); border-color: rgba(210,83,30,0.3); }
+
+  .promo-block { margin-top: 26px; }
+  .promo-label { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color: rgba(20,18,15,0.6); margin-bottom:10px; }
+  .promo-row { display:flex; gap:10px; }
+  .promo-input { flex:1; border:1px solid var(--line-light); background:none; padding:12px 14px; font-size:13px; font-family:'Archivo',sans-serif; }
+  .promo-input::placeholder { color: rgba(20,18,15,0.4); }
+  .promo-apply { border:1px solid var(--ink); background:none; padding:0 20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; }
+  .promo-apply:hover { background:var(--ink); color:var(--bone); }
+
+  .summary-card { border:1px solid var(--line-light); padding: 24px; border-radius:2px; }
+  .summary-card h3 { font-family:'Fraunces',serif; font-size:16px; font-weight:600; margin-bottom:16px; }
+  .summary-row { display:flex; justify-content:space-between; font-size:13px; color: rgba(20,18,15,0.7); padding: 6px 0; }
+  .summary-row.total { font-size:17px; font-weight:700; color:var(--ink); border-top:1px solid var(--line-light); margin-top:10px; padding-top:14px; }
+  .summary-note { font-size:10.5px; color: rgba(20,18,15,0.45); margin-top:6px; line-height:1.5; }
+  .summary-card .btn { margin-top:18px; }
+  .trust-row { display:flex; justify-content:center; gap:16px; font-size:10.5px; color: rgba(20,18,15,0.5); margin-top:12px; }
+
+  .section { padding: 0 24px 60px; }
+  .section-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom: 22px; flex-wrap:wrap; gap:10px; }
+  .section-head h2 { font-size: clamp(1.3rem,2.4vw,1.6rem); }
+  .cross-scroll { display:flex; gap:16px; overflow-x:auto; padding-bottom:6px; }
+  .cross-card { flex:0 0 170px; }
+  .cross-card .ph { height:150px; margin-bottom:8px; position:relative; }
+  .cross-card .price-tag { position:absolute; right:8px; top:8px; background:var(--bone); color:var(--ink); font-size:10px; font-weight:700; padding:4px 8px; border:1px dashed rgba(20,18,15,0.35); }
+  .cross-name { font-family:'Fraunces',serif; font-size:13px; font-weight:600; }
+
+  .empty-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 90px 24px; }
+  .empty-icon { width:76px; height:76px; border:1.5px dashed rgba(20,18,15,0.35); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color: rgba(20,18,15,0.35); margin-bottom:22px; }
+  .empty-title { font-size: clamp(1.3rem,2.4vw,1.7rem); margin-bottom:10px; }
+  .empty-sub { font-size:13.5px; color: rgba(20,18,15,0.55); margin-bottom:26px; max-width:340px; }
+  .empty-wrap .btn { width:auto; }
+
+  footer.site { background: var(--void); color: var(--bone); padding: 60px 24px 30px; }
+  .footer-top { display:flex; gap:50px; flex-wrap:wrap; padding-bottom:40px; border-bottom:1px solid var(--line-dark); margin-bottom:26px; }
+  .footer-brand { flex:1 1 260px; }
+  .footer-brand .logo { margin-bottom:14px; }
+  .footer-brand p { font-size:13px; color: rgba(252,247,248,0.6); line-height:1.6; max-width:280px; }
+  .footer-col { flex:1 1 150px; }
+  .footer-col h4 { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: rgba(252,247,248,0.5); margin-bottom:14px; }
+  .footer-col a { display:block; font-size:13px; margin-bottom:9px; color: rgba(252,247,248,0.85); }
+  .footer-col a:hover { color: var(--terracotta); }
+  .footer-bottom { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:11px; color: rgba(252,247,248,0.45); }
+
+  @media (max-width: 860px) {
+    .nav-links { display:none; }
+    .burger { display:block; }
+    .cart-summary-col { position:static; flex-basis:100%; }
+  }
+  @media (max-width: 560px) {
+    .page-title-row { padding: 22px 20px 0; }
+    .zone-bar { margin: 16px 20px 0; }
+    .cart-section { padding: 20px 20px 40px; }
+    .section { padding: 0 20px 40px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="announce">Livraison Cameroun &amp; international · Paiement à la livraison disponible · ★ 4.8/5 sur 300+ avis</div>
+
+  <header class="site">
+    <div class="nav-row">
+      <div class="logo">KEMI<span>·</span>SHOES</div>
+      <nav class="nav-links">
+        <a href="#">Homme</a>
+        <a href="#">Femme</a>
+        <a href="#">Nouveautés</a>
+        <a href="#">Notre histoire</a>
+      </nav>
+      <div class="nav-icons">
+        <span>🔍</span>
+        <span>👤</span>
+        <span>🛒</span>
+        <button class="burger">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="demo-switch">
+    Aperçu — <button id="showFilled" class="active">Panier rempli</button><button id="showEmpty">Panier vide</button>
+  </div>
+
+  <div id="filledView">
+
+    <div class="page-title-row">
+      <h1 class="display page-title">Mon panier (3)</h1>
+      <a class="clear-link">Vider le panier</a>
+    </div>
+
+    <div class="zone-bar">
+      <span>🚚 Livraison vers : <b>Douala, Cameroun</b></span>
+      <a class="zone-edit">Modifier</a>
+    </div>
+
+    <section class="cart-section">
+      <div class="wrap" style="padding:0;">
+        <div class="cart-grid">
+
+          <div class="cart-items">
+
+            <div class="cart-item">
+              <div class="ph"></div>
+              <div class="item-info">
+                <div class="item-name">Multicolore Black and White</div>
+                <div class="item-variant">Taille 40 · Noir/Blanc · Cuir tressé</div>
+                <div class="item-bottom">
+                  <div class="qty-box"><button>−</button><span>1</span><button>+</button></div>
+                  <div class="item-price">6 500f</div>
+                </div>
+              </div>
+              <button class="remove-x" title="Retirer">✕</button>
+            </div>
+
+            <div class="cart-item">
+              <div class="ph"></div>
+              <div class="item-info">
+                <div class="item-name">Jani.</div>
+                <div class="item-variant">Taille 38 · Beige</div>
+                <div class="item-bottom">
+                  <div class="qty-box"><button>−</button><span>1</span><button>+</button></div>
+                  <div class="item-price">8 000f</div>
+                </div>
+              </div>
+              <button class="remove-x" title="Retirer">✕</button>
+            </div>
+
+            <div class="cart-item">
+              <div class="ph"></div>
+              <div class="item-info">
+                <div class="item-name">GABI.</div>
+                <div class="item-variant">Taille 42 · <span class="custom">Gris — personnalisé</span></div>
+                <div class="item-bottom">
+                  <div class="qty-box"><button>−</button><span>1</span><button>+</button></div>
+                  <div class="item-price">12 000f</div>
+                </div>
+              </div>
+              <button class="remove-x" title="Retirer">✕</button>
+            </div>
+
+            <div class="promo-block">
+              <div class="promo-label">Code promo</div>
+              <div class="promo-row">
+                <input class="promo-input" placeholder="Entrer un code">
+                <button class="promo-apply">Appliquer</button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="cart-summary-col">
+            <div class="summary-card">
+              <h3>Récapitulatif</h3>
+              <div class="summary-row"><span>Sous-total (3 articles)</span><span>26 500f</span></div>
+              <div class="summary-row"><span>Livraison estimée — Douala</span><span>1 500f</span></div>
+              <div class="summary-row"><span>Réduction</span><span>—</span></div>
+              <div class="summary-row total"><span>Total</span><span>28 000f</span></div>
+              <div class="summary-note">Le total final peut varier légèrement selon le mode de paiement choisi à l'étape suivante.</div>
+              <button class="btn btn-primary">Passer la commande</button>
+              <div class="trust-row"><span>🔒 Paiement sécurisé</span><span>↩ Retours sous 7j</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap" style="padding:0;">
+        <div class="section-head"><h2 class="display">Vous pourriez aussi aimer</h2></div>
+        <div class="cross-scroll">
+          <div class="cross-card"><div class="ph"><span class="price-tag">6 000f</span></div><div class="cross-name">Mapubi.</div></div>
+          <div class="cross-card"><div class="ph"><span class="price-tag">6 500f</span></div><div class="cross-name">Karibu.</div></div>
+          <div class="cross-card"><div class="ph"><span class="price-tag">10 000f</span></div><div class="cross-name">Samy</div></div>
+          <div class="cross-card"><div class="ph"><span class="price-tag">18 000f</span></div><div class="cross-name">Spartiate</div></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="emptyView" style="display:none;">
+    <div class="empty-wrap">
+      <div class="empty-icon">🛒</div>
+      <h2 class="display empty-title">Votre panier est vide</h2>
+      <p class="empty-sub">Découvrez nos sandales faites main à Douala et commencez votre sélection.</p>
+      <a class="btn btn-primary">Découvrir la boutique</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <div class="wrap">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="logo">KEMI<span>·</span>SHOES</div>
+          <p>Sandales en cuir assemblées à la main à Douala, Cameroun. Livraison nationale et internationale.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Boutique</h4>
+          <a href="#">Sandales Homme</a>
+          <a href="#">Sandales Femme</a>
+          <a href="#">Nouveautés</a>
+          <a href="#">Couple &amp; Enfant</a>
+        </div>
+        <div class="footer-col">
+          <h4>Aide</h4>
+          <a href="#">FAQ</a>
+          <a href="#">Livraison &amp; retours</a>
+          <a href="#">Guide des tailles</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <a href="#">WhatsApp</a>
+          <a href="#">Instagram</a>
+          <a href="#">Facebook</a>
+          <a href="#">pk11, Douala</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 KEMI SHOES — Tous droits réservés</span>
+        <span>Mentions légales · CGV · Politique de confidentialité</span>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  const filled = document.getElementById('filledView');
+  const empty = document.getElementById('emptyView');
+  const bF = document.getElementById('showFilled');
+  const bE = document.getElementById('showEmpty');
+  bF.addEventListener('click', ()=>{ filled.style.display='block'; empty.style.display='none'; bF.classList.add('active'); bE.classList.remove('active'); });
+  bE.addEventListener('click', ()=>{ filled.style.display='none'; empty.style.display='block'; bE.classList.add('active'); bF.classList.remove('active'); });
+</script>
+
+</body>
+</html>

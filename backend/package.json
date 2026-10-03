@@ -1,0 +1,49 @@
+{
+  "name": "kemi-shoes-backend",
+  "version": "1.0.0",
+  "description": "KEMI SHOES e-commerce backend — Node/Express, security-by-design",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:watch": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --watch --runInBand",
+    "lint": "eslint src",
+    "db:init": "node scripts/db-init.js",
+    "db:reset": "node scripts/db-reset.js",
+    "user:make-admin": "node scripts/make-admin.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.3",
+    "express": "^4.22.3",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.10",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
+    "prom-client": "^15.1.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.5.2",
+    "supertest": "^7.3.0"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KEMI SHOES — Connexion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,300..700,0..1&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #000000; --ink: #14120F; --terracotta: #D2531E; --terracotta-deep: #A83E14;
+    --bone: #FCF7F8; --bone-dim: #F3ECE6; --olive: #D2D388;
+    --line-dark: rgba(255,255,255,0.16); --line-light: rgba(20,18,15,0.14);
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { background: var(--bone); color: var(--ink); font-family: 'Archivo', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration:none; }
+  button, input { font: inherit; }
+  .display { font-family: 'Fraunces', serif; font-variation-settings: "SOFT" 60, "WONK" 1; font-weight: 560; letter-spacing: -0.01em; }
+
+  .btn { font-size:13px; font-weight:700; letter-spacing:0.03em; text-transform:uppercase; padding: 14px 24px; display:flex; align-items:center; justify-content:center; gap:10px; border:none; width:100%; cursor:pointer; transition: background .2s ease, transform .15s ease; }
+  .btn-primary { background: var(--terracotta); color: var(--bone); }
+  .btn-primary:hover { background: var(--terracotta-deep); }
+  .btn-oauth { border: 1px solid var(--ink); background:none; color:var(--ink); text-transform:none; font-weight:600; margin-bottom:10px; }
+  .btn-oauth:hover { background: var(--bone-dim); }
+  .oauth-icon { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; }
+
+  .announce { background: var(--ink); color: var(--bone); text-align:center; font-size:11px; letter-spacing:0.04em; padding: 8px 12px; }
+  header.site { background: var(--void); color: var(--bone); border-bottom: 1px solid var(--line-dark); }
+  .nav-row { display:flex; align-items:center; justify-content:space-between; padding: 16px 24px; max-width:1180px; margin:0 auto; }
+  .logo { font-family:'Fraunces',serif; font-weight:600; font-size:20px; letter-spacing:0.02em; }
+  .logo span { color: var(--terracotta); }
+  .nav-links { display:flex; gap:28px; font-size:13px; font-weight:500; }
+  .nav-links a { opacity:0.85; }
+  .nav-links a:hover { opacity:1; color: var(--terracotta); }
+  .nav-icons { display:flex; gap:16px; align-items:center; font-size:14px; }
+  .burger { display:none; font-size:20px; background:none; border:none; color:var(--bone); }
+
+  .demo-switch { background:#efe6da; text-align:center; padding:10px; font-size:11.5px; }
+  .demo-switch button { border:1px solid var(--ink); background:none; padding:6px 14px; margin:0 4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; cursor:pointer; }
+  .demo-switch button.active { background:var(--ink); color:var(--bone); }
+
+  .auth-wrap { display:flex; justify-content:center; padding: 60px 20px 90px; min-height: 60vh; }
+  .auth-card { width:100%; max-width: 420px; }
+
+  .auth-tabs { display:flex; border-bottom:1px solid var(--line-light); margin-bottom:26px; }
+  .auth-tab { flex:1; text-align:center; padding: 12px; font-size:13px; font-weight:700; color: rgba(20,18,15,0.4); border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none; }
+  .auth-tab.active { color:var(--ink); border-bottom-color: var(--ink); }
+
+  .auth-intro { text-align:center; font-size:13px; color: rgba(20,18,15,0.6); margin-bottom:22px; }
+
+  .divider { display:flex; align-items:center; gap:10px; margin: 18px 0; font-size:11px; color: rgba(20,18,15,0.4); text-transform:uppercase; letter-spacing:0.05em; }
+  .divider .line { flex:1; height:1px; background: var(--line-light); }
+
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color: rgba(20,18,15,0.55); margin-bottom:6px; }
+  .field input, .field select { width:100%; border:1px solid var(--line-light); background:var(--bone); padding:12px 14px; font-size:13.5px; }
+  .field input:focus, .field select:focus { outline:none; border-color:var(--ink); }
+  .phone-row { display:flex; gap:8px; }
+  .phone-row select { flex:0 0 90px; }
+  .phone-row input { flex:1; }
+
+  .toggle-email { text-align:center; font-size:12px; text-decoration:underline; color: rgba(20,18,15,0.6); display:block; margin-top:6px; cursor:pointer; background:none; border:none; width:100%; }
+  .email-fields { display:none; margin-top:16px; padding-top:16px; border-top:1px dashed var(--line-light); }
+  .email-fields.open { display:block; }
+
+  .fineprint { font-size: 10.5px; color: rgba(20,18,15,0.45); text-align:center; margin-top:16px; line-height:1.5; }
+  .fineprint a { text-decoration:underline; }
+
+  .guest-cta { text-align:center; font-size:12.5px; padding-top:22px; margin-top:22px; border-top:1px solid var(--line-light); color: rgba(20,18,15,0.6); }
+  .guest-cta b { text-decoration:underline; color: var(--ink); }
+
+  .otp-back { display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:24px; cursor:pointer; color: rgba(20,18,15,0.6); }
+  .otp-title { text-align:center; margin-bottom:8px; font-size:1.4rem; }
+  .otp-msg { text-align:center; font-size:13px; color: rgba(20,18,15,0.6); margin-bottom:30px; }
+  .otp-msg b { color:var(--ink); }
+  .otp-msg .edit { text-decoration:underline; color: var(--terracotta); margin-left:4px; cursor:pointer; }
+  .otp-boxes { display:flex; gap:10px; justify-content:center; margin-bottom:22px; }
+  .otp-box { width:46px; height:56px; border:1.5px solid var(--line-light); text-align:center; font-size:20px; font-family:'Fraunces',serif; }
+  .otp-box:focus { outline:none; border-color:var(--ink); }
+  .resend { text-align:center; font-size:12px; color: rgba(20,18,15,0.5); margin-bottom:20px; }
+  .resend b { color:var(--ink); }
+  .alt-channel { display:block; text-align:center; font-size:12px; text-decoration:underline; color: rgba(20,18,15,0.6); margin-top:16px; }
+
+  footer.site { background: var(--void); color: var(--bone); padding: 60px 24px 30px; }
+  .footer-top { display:flex; gap:50px; flex-wrap:wrap; padding-bottom:40px; border-bottom:1px solid var(--line-dark); margin-bottom:26px; max-width:1180px; margin-left:auto; margin-right:auto; }
+  .footer-brand { flex:1 1 260px; }
+  .footer-brand .logo { margin-bottom:14px; }
+  .footer-brand p { font-size:13px; color: rgba(252,247,248,0.6); line-height:1.6; max-width:280px; }
+  .footer-col { flex:1 1 150px; }
+  .footer-col h4 { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: rgba(252,247,248,0.5); margin-bottom:14px; }
+  .footer-col a { display:block; font-size:13px; margin-bottom:9px; color: rgba(252,247,248,0.85); }
+  .footer-col a:hover { color: var(--terracotta); }
+  .footer-bottom { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:11px; color: rgba(252,247,248,0.45); max-width:1180px; margin:0 auto; }
+
+  @media (max-width: 860px) { .nav-links { display:none; } .burger { display:block; } }
+</style>
+</head>
+<body>
+
+  <div class="announce">Livraison Cameroun &amp; international · Paiement à la livraison disponible · ★ 4.8/5 sur 300+ avis</div>
+
+  <header class="site">
+    <div class="nav-row">
+      <div class="logo">KEMI<span>·</span>SHOES</div>
+      <nav class="nav-links">
+        <a href="#">Homme</a><a href="#">Femme</a><a href="#">Nouveautés</a><a href="#">Notre histoire</a>
+      </nav>
+      <div class="nav-icons"><span>🔍</span><span>👤</span><span>🛒</span><button class="burger">☰</button></div>
+    </div>
+  </header>
+
+  <div class="demo-switch">
+    Aperçu — <button id="showAuth" class="active">Connexion / Inscription</button><button id="showOtp">Vérification du code</button>
+  </div>
+
+  <div id="authView" class="auth-wrap">
+    <div class="auth-card">
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Se connecter</button>
+        <button class="auth-tab" id="tabSignup">Créer un compte</button>
+      </div>
+
+      <p class="auth-intro">Accédez à vos commandes et suivez vos livraisons</p>
+
+      <button class="btn btn-oauth"><span class="oauth-icon">G</span> Continuer avec Google</button>
+      <button class="btn btn-oauth"><span class="oauth-icon">f</span> Continuer avec Facebook</button>
+
+      <div class="divider"><div class="line"></div>ou<div class="line"></div></div>
+
+      <div class="field">
+        <label>Numéro de téléphone</label>
+        <div class="phone-row">
+          <select><option>🇨🇲 +237</option><option>🇨🇮 +225</option><option>🇫🇷 +33</option></select>
+          <input type="text" placeholder="6XX XXX XXX">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="document.getElementById('showOtp').click()">Recevoir un code</button>
+
+      <button class="toggle-email" id="toggleEmailBtn">Utiliser un email et mot de passe à la place</button>
+
+      <div class="email-fields" id="emailFields">
+        <div class="field"><label>Email</label><input type="text" placeholder="nom@exemple.com"></div>
+        <div class="field"><label>Mot de passe</label><input type="password" placeholder="••••••••"></div>
+        <button class="btn btn-primary">Continuer</button>
+      </div>
+
+      <p class="fineprint">En continuant, vous acceptez les <a href="#">CGV</a> et la <a href="#">politique de confidentialité</a> de KEMI SHOES.</p>
+
+      <div class="guest-cta">Pas envie de créer un compte ? <a href="#"><b>Continuer sans compte</b></a></div>
+    </div>
+  </div>
+
+  <div id="otpView" class="auth-wrap" style="display:none;">
+    <div class="auth-card">
+      <div class="otp-back" onclick="document.getElementById('showAuth').click()">← Retour</div>
+      <h2 class="display otp-title">Vérification</h2>
+      <p class="otp-msg">Code envoyé au <b>+237 6XX XXX XXX</b><span class="edit">Modifier</span></p>
+
+      <div class="otp-boxes">
+        <input class="otp-box" maxlength="1" value="4">
+        <input class="otp-box" maxlength="1" value="2">
+        <input class="otp-box" maxlength="1" value="0">
+        <input class="otp-box" maxlength="1">
+        <input class="otp-box" maxlength="1">
+        <input class="otp-box" maxlength="1">
+      </div>
+
+      <p class="resend">Renvoyer le code dans <b>00:45</b></p>
+
+      <button class="btn btn-primary">Vérifier</button>
+      <a class="alt-channel" href="#">Recevoir le code par WhatsApp à la place</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="logo">KEMI<span>·</span>SHOES</div>
+        <p>Sandales en cuir assemblées à la main à Douala, Cameroun. Livraison nationale et internationale.</p>
+      </div>
+      <div class="footer-col"><h4>Boutique</h4><a href="#">Sandales Homme</a><a href="#">Sandales Femme</a><a href="#">Nouveautés</a><a href="#">Couple &amp; Enfant</a></div>
+      <div class="footer-col"><h4>Aide</h4><a href="#">FAQ</a><a href="#">Livraison &amp; retours</a><a href="#">Guide des tailles</a><a href="#">Contact</a></div>
+      <div class="footer-col"><h4>Contact</h4><a href="#">WhatsApp</a><a href="#">Instagram</a><a href="#">Facebook</a><a href="#">pk11, Douala</a></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 KEMI SHOES — Tous droits réservés</span><span>Mentions légales · CGV · Politique de confidentialité</span></div>
+  </footer>
+
+<script>
+  const authView = document.getElementById('authView');
+  const otpView = document.getElementById('otpView');
+  const bAuth = document.getElementById('showAuth');
+  const bOtp = document.getElementById('showOtp');
+  bAuth.addEventListener('click', ()=>{ authView.style.display='flex'; otpView.style.display='none'; bAuth.classList.add('active'); bOtp.classList.remove('active'); });
+  bOtp.addEventListener('click', ()=>{ authView.style.display='none'; otpView.style.display='flex'; bOtp.classList.add('active'); bAuth.classList.remove('active'); });
+
+  const tabLogin = document.getElementById('tabLogin');
+  const tabSignup = document.getElementById('tabSignup');
+  tabLogin.addEventListener('click', ()=>{ tabLogin.classList.add('active'); tabSignup.classList.remove('active'); });
+  tabSignup.addEventListener('click', ()=>{ tabSignup.classList.add('active'); tabLogin.classList.remove('active'); });
+
+  document.getElementById('toggleEmailBtn').addEventListener('click', function(){
+    document.getElementById('emailFields').classList.toggle('open');
+  });
+
+  document.querySelectorAll('.otp-box').forEach((box, i, all) => {
+    box.addEventListener('input', () => { if (box.value && all[i+1]) all[i+1].focus(); });
+  });
+</script>
+
+</body>
+</html>

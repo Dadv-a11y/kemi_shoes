@@ -1,0 +1,74 @@
+import { randomUUID, randomInt, createHmac } from 'node:crypto';
+import { get, run } from '../../db/client.js';
+import { env } from '../../config/env.js';
+import { badRequest } from '../../middleware/errorHandler.js';
+import { smsSender, whatsappSender } from '../notifications/sms.js';
+import { otpRequestsTotal } from '../../config/metrics.js';
+
+// HMAC plutôt que bcrypt pour ces codes courts et à durée de vie très brève :
+// bcrypt serait inutilement coûteux ici, l'enjeu est surtout d'éviter de stocker
+// le code en clair en base (en cas de fuite de la table OtpCode).
+function hashCode(phone, code) {
+  return createHmac('sha256', env.JWT_ACCESS_SECRET).update(`${phone}:${code}`).digest('hex');
+}
+
+function generateSixDigitCode() {
+  return String(randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
+/**
+ * Génère un code, le stocke haché avec une expiration, puis l'envoie par SMS
+ * (avec repli WhatsApp si l'envoi SMS échoue). Le code en clair n'est jamais
+ * retourné à l'appelant HTTP — uniquement transmis via le canal SMS/WhatsApp.
+ */
+export async function requestOtp(phone) {
+  const code = generateSixDigitCode();
+  const expiresAt = new Date(Date.now() + env.OTP_TTL_MINUTES * 60 * 1000).toISOString();
+
+  await run(
+    `INSERT INTO OtpCode (id, phone, codeHash, expiresAt) VALUES (?, ?, ?, ?)`,
+    [randomUUID(), phone, hashCode(phone, code), expiresAt]
+  );
+
+  const message = `Votre code KEMI SHOES : ${code} (valable ${env.OTP_TTL_MINUTES} minutes)`;
+  try {
+    await smsSender.send(phone, message);
+  } catch {
+    await whatsappSender.send(phone, message);
+  }
+  otpRequestsTotal.inc();
+
+  return { expiresAt };
+}
+
+/**
+ * Vérifie un code OTP pour un numéro donné.
+ * - Prend le code non consommé le plus récent pour ce numéro.
+ * - Rejette si expiré, déjà consommé, ou nombre max de tentatives atteint.
+ * - Incrémente le compteur de tentatives à chaque échec (protection brute-force
+ *   même si express-rate-limit tombe/est contourné — défense en profondeur OWASP).
+ */
+export async function verifyOtp(phone, code) {
+  const record = await get(
+    `SELECT * FROM OtpCode WHERE phone = ? AND consumed = 0 ORDER BY createdAt DESC LIMIT 1`,
+    [phone]
+  );
+
+  if (!record) throw badRequest('Aucun code en attente pour ce numéro.');
+  if (record.attempts >= env.OTP_MAX_ATTEMPTS) {
+    throw badRequest('Nombre maximal de tentatives atteint, redemandez un code.');
+  }
+  if (new Date(record.expiresAt).getTime() < Date.now()) {
+    throw badRequest('Ce code a expiré, redemandez-en un.');
+  }
+
+  const isValid = record.codeHash === hashCode(phone, code);
+
+  if (!isValid) {
+    await run(`UPDATE OtpCode SET attempts = attempts + 1 WHERE id = ?`, [record.id]);
+    throw badRequest('Code incorrect.');
+  }
+
+  await run(`UPDATE OtpCode SET consumed = 1 WHERE id = ?`, [record.id]);
+  return true;
+}

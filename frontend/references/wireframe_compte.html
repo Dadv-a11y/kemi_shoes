@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>KEMI SHOES — Wireframe basse fidélité — Mes commandes / Mes informations</title>
+<style>
+  :root {
+    --line: #9a9a9a;
+    --line-strong: #4a4a4a;
+    --panel: #f2f2f2;
+    --panel-dark: #e2e2e2;
+    --text: #2b2b2b;
+    --annot: #b5473a;
+    --annot-bg: #fdf1ef;
+    --ok: #3f6b4a;
+    --warn: #a6741f;
+    --err: #a13b2f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    background: #ececec;
+    padding: 40px 16px 100px;
+  }
+  h1.page-title { text-align: center; font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 4px; }
+  p.page-sub { text-align: center; color: #777; font-size: 13px; margin-top: 0; margin-bottom: 30px; }
+  .legend { max-width: 1200px; margin: 0 auto 34px; background: #fff; border: 1px solid var(--line); padding: 14px 18px; font-size: 12px; color: #555; }
+  .legend b { color: var(--text); }
+
+  .flow-grid { display:flex; flex-wrap:wrap; gap: 30px; justify-content:center; align-items:flex-start; }
+  .step-unit { display:flex; flex-direction:column; align-items:center; width: 330px; }
+  .step-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #666; margin-bottom: 10px; text-align:center; font-weight:bold; }
+  .phone { width: 320px; border: 2px solid var(--line-strong); border-radius: 26px; padding: 9px; background: #fff; }
+  .screen { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .wf-block { border-bottom: 1px dashed var(--line); padding: 10px 12px; position: relative; }
+  .wf-block:last-child { border-bottom: none; }
+  .wf-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 6px; font-weight: bold; }
+  .placeholder-img {
+    background: repeating-linear-gradient(45deg, var(--panel), var(--panel) 8px, var(--panel-dark) 8px, var(--panel-dark) 16px);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    color: #888; font-size: 9px; text-align: center;
+  }
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .icon-circle { width: 20px; height: 20px; border: 1px solid var(--line-strong); border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:9px; color:#555;}
+  .header-title { font-size: 11px; font-weight: bold; }
+
+  /* order tabs */
+  .order-tabs { display:flex; gap:6px; overflow-x:auto; }
+  .order-tab { flex-shrink:0; font-size:9.5px; border:1px solid var(--line-strong); padding:5px 10px; }
+  .order-tab.active { background: var(--line-strong); color:#fff; }
+
+  /* order card */
+  .order-card { border:1px solid var(--line); padding:9px; margin-bottom:9px; }
+  .order-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .order-id { font-size:10px; font-weight:bold; }
+  .order-date { font-size:8.5px; color:#999; }
+  .badge { font-size:7.5px; padding:2px 7px; border-radius:10px; text-transform:uppercase; letter-spacing:0.03em; color:#fff; }
+  .badge.progress { background: var(--warn); }
+  .badge.done { background: var(--ok); }
+  .badge.cancel { background: var(--err); }
+  .order-thumbs { display:flex; gap:5px; margin-bottom:6px; }
+  .order-thumbs .placeholder-img { width:34px; height:34px; }
+  .order-bottom { display:flex; justify-content:space-between; align-items:center; }
+  .order-total { font-size:10px; font-weight:bold; }
+  .order-link { font-size:8.5px; text-decoration:underline; color:#555; }
+  .reorder-btn { font-size:8px; border:1px solid var(--line-strong); padding:3px 8px; margin-top:6px; display:inline-block; }
+
+  /* status timeline */
+  .timeline { display:flex; align-items:flex-start; padding: 4px 2px; }
+  .tl-step { flex:1; text-align:center; position:relative; }
+  .tl-dot { width:14px; height:14px; border-radius:50%; border:1px solid var(--line-strong); margin:0 auto 4px; font-size:8px; display:flex; align-items:center; justify-content:center; background:#fff; }
+  .tl-dot.done { background: var(--ok); border-color:var(--ok); color:#fff; }
+  .tl-dot.active { background: var(--warn); border-color:var(--warn); color:#fff; }
+  .tl-line { position:absolute; top:6px; left:-50%; width:100%; height:1px; background: var(--panel-dark); z-index:-1; }
+  .tl-step:first-child .tl-line { display:none; }
+  .tl-txt { font-size:7px; color:#777; }
+  .eta-note { text-align:center; font-size:9px; color:#555; margin-top:6px; }
+
+  .info-row { display:flex; justify-content:space-between; font-size:9px; color:#555; padding:2px 0; }
+  .info-row b { color: var(--text); }
+
+  .btn-primary { text-align: center; background: var(--line-strong); color:#fff; font-size:10px; padding:9px; text-transform:uppercase; letter-spacing:0.04em; }
+  .btn-outline { text-align:center; border:1px solid var(--line-strong); font-size:9px; padding:8px; margin-top:6px; }
+
+  /* profile fields */
+  .prof-row { display:flex; justify-content:space-between; align-items:center; padding: 7px 0; border-bottom:1px solid var(--panel-dark); font-size:9.5px; }
+  .prof-row:last-child { border-bottom:none; }
+  .prof-label { color:#999; font-size:8.5px; display:block; margin-bottom:2px; }
+  .prof-edit { font-size:8.5px; text-decoration:underline; color:#555; }
+  .conn-badge { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); padding:4px 8px; font-size:8.5px; }
+  .conn-icon { width:14px; height:14px; border-radius:50%; border:1px solid var(--line-strong); display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:bold; }
+
+  /* address card */
+  .addr-card { border:1px solid var(--line); padding:8px; margin-bottom:8px; font-size:9.5px; position:relative; }
+  .addr-card.default { border-color: var(--line-strong); }
+  .addr-default-badge { position:absolute; top:8px; right:8px; font-size:7px; background:var(--line-strong); color:#fff; padding:2px 6px; border-radius:8px; text-transform:uppercase; }
+  .addr-actions { display:flex; margin-top:5px; }
+  .addr-actions a { font-size:8px; text-decoration:underline; color:#555; margin-right:12px; }
+
+  .add-addr-btn { text-align:center; border:1px dashed var(--line-strong); font-size:9.5px; padding:9px; color:#555; }
+
+  .danger-link { font-size:9px; text-decoration:underline; color: var(--err); text-align:center; display:block; margin-top:4px; }
+  .neutral-link { font-size:9px; text-decoration:underline; color:#555; text-align:center; display:block; }
+
+  /* mini annotations */
+  .mini-annot { width: 100%; margin-top: 12px; }
+  .mini-annot li { font-size: 10.5px; line-height:1.4; color: #444; margin-bottom: 7px; }
+  .mini-annot li b { color: var(--annot); }
+</style>
+</head>
+<body>
+
+  <h1 class="page-title">KEMI SHOES — Wireframe basse fidélité</h1>
+  <p class="page-sub">Mes commandes &amp; Mes informations · V1 mobile-first · gris = placeholder, aucune couleur finale appliquée à ce stade</p>
+
+  <div class="legend">
+    <b>Note de lecture :</b> trois écrans de l'espace compte — liste des commandes, détail d'une commande avec suivi de statut, et informations/adresses. Ces pages ne sont accessibles qu'après connexion (voir wireframe précédent) ; un visiteur invité n'y a pas accès puisqu'il n'a pas de compte.
+  </div>
+
+  <div class="flow-grid">
+
+    <!-- SCREEN 1: Mes commandes -->
+    <div class="step-unit">
+      <div class="step-label">Mes commandes</div>
+      <div class="phone">
+        <div class="screen">
+
+          <div class="header">
+            <div class="icon-circle">←</div>
+            <div class="header-title">Mes commandes</div>
+            <div style="width:20px;"></div>
+          </div>
+
+          <div class="wf-block">
+            <div class="order-tabs">
+              <div class="order-tab active">Toutes</div>
+              <div class="order-tab">En cours</div>
+              <div class="order-tab">Livrées</div>
+              <div class="order-tab">Annulées</div>
+            </div>
+          </div>
+
+          <div class="wf-block">
+            <div class="order-card">
+              <div class="order-top">
+                <div><span class="order-id">#KS-10234</span> <span class="order-date">16 août 2026</span></div>
+                <span class="badge progress">En livraison</span>
+              </div>
+              <div class="order-thumbs">
+                <div class="placeholder-img"></div><div class="placeholder-img"></div><div class="placeholder-img"></div>
+              </div>
+              <div class="order-bottom">
+                <div class="order-total">28 000f</div>
+                <div class="order-link">Voir détail →</div>
+              </div>
+            </div>
+
+            <div class="order-card">
+              <div class="order-top">
+                <div><span class="order-id">#KS-10198</span> <span class="order-date">2 août 2026</span></div>
+                <span class="badge done">Livrée</span>
+              </div>
+              <div class="order-thumbs">
+                <div class="placeholder-img"></div>
+              </div>
+              <div class="order-bottom">
+                <div class="order-total">12 000f</div>
+                <div class="order-link">Voir détail →</div>
+              </div>
+              <div class="reorder-btn">↗ Recommander à un proche</div>
+            </div>
+
+            <div class="order-card">
+              <div class="order-top">
+                <div><span class="order-id">#KS-10150</span> <span class="order-date">20 juil. 2026</span></div>
+                <span class="badge cancel">Annulée</span>
+              </div>
+              <div class="order-thumbs">
+                <div class="placeholder-img"></div><div class="placeholder-img"></div>
+              </div>
+              <div class="order-bottom">
+                <div class="order-total">15 000f</div>
+                <div class="order-link">Voir détail →</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <ul class="mini-annot">
+        <li><b>Filtres par statut</b> pour retrouver vite une commande en cours vs l'historique.</li>
+        <li><b>Miniatures visibles</b> dans la liste — pas besoin d'ouvrir le détail pour reconnaître la commande.</li>
+        <li><b>Recommander à un proche</b> ouvre un tiroir de partage (WhatsApp/Instagram/Facebook) pour ce produit précis — effet viral plutôt qu'un renouvellement de commande, cohérent avec le sens du verbe.</li>
+      </ul>
+    </div>
+
+    <!-- SCREEN 1bis: Partage -->
+    <div class="step-unit">
+      <div class="step-label">Tiroir de partage (au tap sur « Recommander »)</div>
+      <div class="phone" style="width:280px;">
+        <div class="screen">
+          <div class="wf-block">
+            <div class="wf-label" style="text-align:center;">Recommander ce produit</div>
+            <div style="display:flex;gap:8px;align-items:center;border:1px solid var(--line);padding:8px;margin-bottom:10px;">
+              <div class="placeholder-img" style="width:36px;height:36px;flex-shrink:0;"></div>
+              <div style="font-size:9.5px;"><b>GABI.</b><br><span style="color:#888;">12 000 FCFA</span></div>
+            </div>
+            <div style="display:flex; justify-content:space-around; margin-bottom:12px;">
+              <div style="text-align:center;"><div class="icon-circle" style="width:32px;height:32px;font-size:13px;margin:0 auto 4px;">W</div><span style="font-size:8px;">WhatsApp</span></div>
+              <div style="text-align:center;"><div class="icon-circle" style="width:32px;height:32px;font-size:13px;margin:0 auto 4px;">I</div><span style="font-size:8px;">Instagram</span></div>
+              <div style="text-align:center;"><div class="icon-circle" style="width:32px;height:32px;font-size:13px;margin:0 auto 4px;">f</div><span style="font-size:8px;">Facebook</span></div>
+              <div style="text-align:center;"><div class="icon-circle" style="width:32px;height:32px;font-size:13px;margin:0 auto 4px;">🔗</div><span style="font-size:8px;">Copier</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="mini-annot">
+        <li><b>Lien pré-rempli</b> avec un message court + le visuel produit, prêt à envoyer sans rédaction supplémentaire.</li>
+        <li><b>WhatsApp en premier</b> — canal le plus naturel pour cette audience.</li>
+      </ul>
+    </div>
+
+    <!-- SCREEN 2: Détail commande -->
+    <div class="step-unit">
+      <div class="step-label">Détail d'une commande</div>
+      <div class="phone">
+        <div class="screen">
+
+          <div class="header">
+            <div class="icon-circle">←</div>
+            <div class="header-title">Commande #KS-10234</div>
+            <div style="width:20px;"></div>
+          </div>
+
+          <div class="wf-block">
+            <div class="wf-label">Suivi</div>
+            <div class="timeline">
+              <div class="tl-step"><div class="tl-line"></div><div class="tl-dot done">✓</div><div class="tl-txt">Confirmée</div></div>
+              <div class="tl-step"><div class="tl-line"></div><div class="tl-dot done">✓</div><div class="tl-txt">Préparée</div></div>
+              <div class="tl-step"><div class="tl-line"></div><div class="tl-dot active">●</div><div class="tl-txt">Expédiée</div></div>
+              <div class="tl-step"><div class="tl-line"></div><div class="tl-dot">○</div><div class="tl-txt">Livrée</div></div>
+            </div>
+            <div class="eta-note">Livraison estimée : demain avant 18h</div>
+          </div>
+
+          <div class="wf-block">
+            <div class="wf-label">Articles (3)</div>
+            <div class="order-thumbs">
+              <div class="placeholder-img"></div><div class="placeholder-img"></div><div class="placeholder-img"></div>
+            </div>
+          </div>
+
+          <div class="wf-block">
+            <div class="wf-label">Détails</div>
+            <div class="info-row"><span>Adresse</span><b>Makepé, Douala</b></div>
+            <div class="info-row"><span>Paiement</span><b>Mobile Money</b></div>
+            <div class="info-row"><span>Sous-total</span><b>26 500f</b></div>
+            <div class="info-row"><span>Livraison</span><b>1 500f</b></div>
+            <div class="info-row"><span>Total</span><b>28 000f</b></div>
+          </div>
+
+          <div class="wf-block">
+            <div class="btn-primary">Suivre sur WhatsApp</div>
+            <div class="btn-outline">Besoin d'aide avec cette commande ?</div>
+          </div>
+
+        </div>
+      </div>
+      <ul class="mini-annot">
+        <li><b>Timeline de statut</b> — mêmes 4 étapes que le back-office logistique, vocabulaire simple côté client.</li>
+        <li><b>ETA concrète</b> plutôt qu'une plage vague — réduit les messages « où est ma commande ? ».</li>
+        <li><b>Contact direct</b> vers le support, lié à cette commande précise (pas un formulaire générique).</li>
+      </ul>
+    </div>
+
+    <!-- SCREEN 3: Mes informations -->
+    <div class="step-unit">
+      <div class="step-label">Mes informations &amp; adresses</div>
+      <div class="phone">
+        <div class="screen">
+
+          <div class="header">
+            <div class="icon-circle">←</div>
+            <div class="header-title">Mes informations</div>
+            <div style="width:20px;"></div>
+          </div>
+
+          <div class="wf-block">
+            <div class="wf-label">Profil</div>
+            <div class="prof-row"><div><span class="prof-label">Nom</span>Daril M.</div><a class="prof-edit">Modifier</a></div>
+            <div class="prof-row"><div><span class="prof-label">Téléphone</span>+237 6XX XXX XXX</div><a class="prof-edit">Modifier</a></div>
+            <div class="prof-row"><div><span class="prof-label">Email</span>nom@exemple.com</div><a class="prof-edit">Modifier</a></div>
+            <div class="prof-row">
+              <div><span class="prof-label">Connexion</span>
+                <div class="conn-badge"><div class="conn-icon">G</div>Connecté via Google</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-block">
+            <div class="wf-label">Adresses enregistrées</div>
+
+            <div class="addr-card default">
+              <div class="addr-default-badge">Par défaut</div>
+              <b>Domicile</b><br>
+              Makepé, Douala — Cameroun
+              <div class="addr-actions"><a>Modifier</a><a>Supprimer</a></div>
+            </div>
+
+            <div class="addr-card">
+              <b>Bureau</b><br>
+              Bastos, Yaoundé — Cameroun
+              <div class="addr-actions"><a>Modifier</a><a>Définir par défaut</a><a>Supprimer</a></div>
+            </div>
+
+            <div class="add-addr-btn">+ Ajouter une adresse</div>
+          </div>
+
+          <div class="wf-block" style="border-bottom:none;">
+            <a class="neutral-link">Se déconnecter</a>
+            <a class="danger-link">Supprimer mon compte</a>
+          </div>
+
+        </div>
+      </div>
+      <ul class="mini-annot">
+        <li><b>Édition en ligne</b> champ par champ, pas de longue page de formulaire à valider d'un coup.</li>
+        <li><b>Méthode de connexion affichée</b> pour rappel (Google/Facebook/Téléphone) — utile si plusieurs méthodes existent pour le même compte à terme.</li>
+        <li><b>Adresses multiples</b> avec une par défaut, réutilisées automatiquement au checkout.</li>
+        <li><b>Suppression de compte</b> visible mais volontairement discrète (couleur d'alerte, en bas) — accessible sans être mise en avant, cohérent avec la transparence déjà actée sur les cookies.</li>
+      </ul>
+    </div>
+
+  </div>
+
+</body>
+</html>

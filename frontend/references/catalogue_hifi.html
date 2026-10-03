@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KEMI SHOES — Boutique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,300..700,0..1&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #000000;
+    --ink: #14120F;
+    --terracotta: #D2531E;
+    --terracotta-deep: #A83E14;
+    --bone: #FCF7F8;
+    --bone-dim: #F3ECE6;
+    --olive: #D2D388;
+    --line-dark: rgba(255,255,255,0.16);
+    --line-light: rgba(20,18,15,0.14);
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bone);
+    color: var(--ink);
+    font-family: 'Archivo', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  img, .ph { display:block; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor:pointer; }
+  .display {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "SOFT" 60, "WONK" 1;
+    font-weight: 560;
+    letter-spacing: -0.01em;
+  }
+  .eyebrow {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.14em; color: var(--terracotta);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  .ph {
+    position: relative; overflow:hidden;
+    background:
+      radial-gradient(120% 140% at 15% 0%, rgba(255,255,255,0.10), transparent 55%),
+      linear-gradient(150deg, #3a2c22 0%, #241b15 45%, #171310 100%);
+  }
+  .ph::after {
+    content:""; position:absolute; top:0;left:0;right:0;bottom:0;
+    background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 7px);
+  }
+  .ph .ph-label {
+    position:absolute; left:10px; bottom:10px; z-index:2;
+    font-size:10px; letter-spacing:0.05em; text-transform:uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .tag {
+    display:inline-flex; align-items:center; gap:6px;
+    border: 1.5px dashed rgba(20,18,15,0.4); border-radius: 3px;
+    padding: 6px 12px 6px 18px;
+    font-size: 11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    color: var(--ink); position:relative; background:none;
+  }
+  .tag::before {
+    content:""; position:absolute; left:7px; top:50%; transform:translateY(-50%);
+    width:5px; height:5px; border-radius:50%; border:1.5px solid rgba(20,18,15,0.4);
+  }
+  .tag.sel { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+  .tag.sel::before { border-color: var(--bone); }
+
+  .btn {
+    font-size:13px; font-weight:700; letter-spacing:0.03em; text-transform:uppercase;
+    padding: 14px 26px; display:inline-block; text-align:center; border:none;
+    transition: transform .15s ease, background .2s ease;
+  }
+  .btn-primary { background: var(--terracotta); color: var(--bone); }
+  .btn-primary:hover { background: var(--terracotta-deep); transform: translateY(-1px); }
+  .btn-outline { border: 1px solid var(--ink); color: var(--ink); background:none; }
+  .btn-outline:hover { background: var(--ink); color: var(--bone); }
+
+  /* ===== header (shared) ===== */
+  .announce { background: var(--ink); color: var(--bone); text-align:center; font-size:11px; letter-spacing:0.04em; padding: 8px 12px; }
+  header.site { background: var(--void); color: var(--bone); position: sticky; top:0; z-index: 50; border-bottom: 1px solid var(--line-dark); }
+  .nav-row { display:flex; align-items:center; justify-content:space-between; padding: 16px 24px; }
+  .logo { font-family:'Fraunces',serif; font-weight:600; font-size:20px; letter-spacing:0.02em; }
+  .logo span { color: var(--terracotta); }
+  .nav-links { display:flex; gap:28px; font-size:13px; font-weight:500; }
+  .nav-links a { opacity:0.85; transition: opacity .2s; }
+  .nav-links a:hover { opacity:1; color: var(--terracotta); }
+  .nav-links a.active { opacity:1; color: var(--terracotta); }
+  .nav-icons { display:flex; gap:16px; align-items:center; font-size:14px; }
+  .burger { display:none; font-size:20px; background:none; border:none; color:var(--bone); }
+
+  /* ===== page header ===== */
+  .page-head { padding: 34px 24px 0; }
+  .breadcrumb { font-size:11px; color: rgba(20,18,15,0.5); margin-bottom:14px; }
+  .breadcrumb a:hover { color: var(--terracotta); }
+  .page-title-row { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+  .page-title { font-size: clamp(1.8rem,3.4vw,2.5rem); }
+  .result-count-top { font-size:12px; color: rgba(20,18,15,0.55); }
+
+  .tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom: 18px; }
+  .tab-btn {
+    flex-shrink:0; font-size:12.5px; font-weight:600; padding: 9px 18px;
+    border: 1px solid var(--ink); background:none; color:var(--ink);
+    transition: background .15s ease, color .15s ease;
+  }
+  .tab-btn.active { background: var(--ink); color: var(--bone); }
+  .tab-btn:not(.active):hover { background: rgba(20,18,15,0.06); }
+
+  /* ===== toolbar ===== */
+  .toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding: 16px 24px; border-top:1px solid var(--line-light); border-bottom:1px solid var(--line-light); background: var(--bone); }
+  .toolbar-spacer { display:none; }
+  .filter-trigger {
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--ink); background:none; color:var(--ink);
+    padding: 11px 20px; font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;
+  }
+  .filter-trigger:hover { background: var(--ink); color: var(--bone); }
+  .filter-trigger .count { background: var(--terracotta); color:var(--bone); border-radius:20px; font-size:10px; padding:1px 7px; }
+  .chip-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .chip {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; border:1px solid rgba(20,18,15,0.25); border-radius:20px;
+    padding: 6px 8px 6px 14px; color: var(--ink);
+  }
+  .chip button { background:none; border:none; font-size:12px; color:rgba(20,18,15,0.5); line-height:1; padding:2px; }
+
+  /* ===== product grid ===== */
+  .prod-section { padding: 30px 24px 70px; }
+  .prod-grid { display:flex; flex-wrap:wrap; gap: 22px 20px; }
+  .prod-card { flex: 0 1 calc(50% - 10px); }
+  .prod-media { height: 240px; position:relative; overflow:hidden; }
+  .prod-media .ph { position:absolute; top:0;left:0;right:0;bottom:0; transition: transform .5s ease; }
+  .prod-card:hover .prod-media .ph { transform: scale(1.05); }
+  .price-tag {
+    position:absolute; right:10px; top:10px; z-index:2;
+    background: var(--bone); color: var(--ink); font-size:11px; font-weight:700;
+    padding:5px 10px; border-radius:2px; border: 1px dashed rgba(20,18,15,0.35);
+  }
+  .wishlist-btn {
+    position:absolute; left:10px; top:10px; z-index:2;
+    width:26px; height:26px; border-radius:50%; background:rgba(252,247,248,0.9);
+    border:1px solid rgba(20,18,15,0.2); display:flex; align-items:center; justify-content:center; font-size:12px;
+  }
+  .prod-info { padding-top:10px; }
+  .prod-name { font-family:'Fraunces',serif; font-weight:600; font-size:15px; }
+  .prod-sub { font-size:12px; color: rgba(20,18,15,0.55); margin-top:2px; }
+  .swatch-row { display:flex; gap:5px; margin-top:8px; }
+  .swatch-row span { width:11px; height:11px; border-radius:50%; border:1px solid rgba(20,18,15,0.35); display:inline-block; background: var(--bone-dim); }
+
+  /* ===== load more / infinite ===== */
+  .load-zone { text-align:center; padding: 40px 0 10px; }
+  .spinner-row { display:flex; flex-direction:column; align-items:center; gap:8px; color: rgba(20,18,15,0.45); font-size:11px; }
+  .spinner {
+    width:20px; height:20px; border-radius:50%;
+    border:2px dashed rgba(20,18,15,0.35);
+    animation: spin 3s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-more-btn { display:none; }
+  .load-more-btn.show { display:inline-block; }
+
+  /* ===== filter drawer ===== */
+  .drawer-overlay {
+    position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(20,18,15,0.4); z-index:90;
+    opacity:0; pointer-events:none; transition: opacity .25s ease;
+  }
+  .drawer-overlay.open { opacity:1; pointer-events:auto; }
+  .drawer {
+    position:fixed; top:0; right:0; bottom:0; width: 360px; max-width:88vw;
+    background: var(--bone); z-index:91; transform: translateX(100%);
+    transition: transform .3s ease; display:flex; flex-direction:column;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { display:flex; align-items:center; justify-content:space-between; padding: 20px 22px; border-bottom:1px solid var(--line-light); }
+  .drawer-head h3 { font-family:'Fraunces',serif; font-size:18px; font-weight:600; }
+  .drawer-close { background:none; border:none; font-size:18px; color:var(--ink); }
+  .drawer-body { padding: 6px 22px; overflow-y:auto; flex:1; }
+  .drawer-group { border-bottom:1px solid var(--line-light); padding: 18px 0; }
+  .drawer-group-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color: rgba(20,18,15,0.5); margin-bottom:14px; }
+  .opt-row { display:flex; align-items:center; gap:10px; font-size:13.5px; padding: 7px 0; }
+  .radio, .checkbox { width:16px; height:16px; border:1.5px solid var(--ink); flex-shrink:0; }
+  .radio { border-radius:50%; position:relative; }
+  .radio.sel::after { content:""; position:absolute; top:3px;left:3px;right:3px;bottom:3px; border-radius:50%; background:var(--ink); }
+  .checkbox.sel { background: var(--ink); }
+  .size-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .size-chip { border:1px solid var(--ink); font-size:12px; padding:7px 13px; }
+  .size-chip.sel { background: var(--ink); color: var(--bone); }
+  .color-swatches { display:flex; gap:10px; }
+  .color-swatches .sw { width:26px; height:26px; border-radius:50%; border:1px solid rgba(20,18,15,0.3); position:relative; }
+  .color-swatches .sw.sel::after { content:""; position:absolute; top:-4px;left:-4px;right:-4px;bottom:-4px; border-radius:50%; border:1.5px solid var(--terracotta); }
+  .price-range { font-size:12px; color: rgba(20,18,15,0.6); margin-top:6px; }
+  .range-track { height:3px; background: var(--line-light); border-radius:2px; position:relative; margin: 16px 4px 6px; }
+  .range-track .fill { position:absolute; height:100%; background: var(--terracotta); left:15%; right:35%; border-radius:2px; }
+  .range-track .handle { position:absolute; top:50%; width:14px; height:14px; border-radius:50%; background:var(--ink); transform:translate(-50%,-50%); }
+  .drawer-foot { display:flex; gap:10px; padding: 18px 22px; border-top:1px solid var(--line-light); }
+  .drawer-foot .reset { flex:0 0 auto; font-size:12px; text-decoration:underline; color: rgba(20,18,15,0.6); display:flex; align-items:center; }
+  .drawer-foot .apply { flex:1; }
+
+  /* ===== footer (shared) ===== */
+  footer.site { background: var(--void); color: var(--bone); padding: 60px 24px 30px; }
+  .footer-top { display:flex; gap:50px; flex-wrap:wrap; padding-bottom:40px; border-bottom:1px solid var(--line-dark); margin-bottom:26px; }
+  .footer-brand { flex:1 1 260px; }
+  .footer-brand .logo { margin-bottom:14px; }
+  .footer-brand p { font-size:13px; color: rgba(252,247,248,0.6); line-height:1.6; max-width:280px; }
+  .footer-col { flex:1 1 150px; }
+  .footer-col h4 { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: rgba(252,247,248,0.5); margin-bottom:14px; }
+  .footer-col a { display:block; font-size:13px; margin-bottom:9px; color: rgba(252,247,248,0.85); }
+  .footer-col a:hover { color: var(--terracotta); }
+  .footer-bottom { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:11px; color: rgba(252,247,248,0.45); }
+
+  @media (min-width: 720px) {
+    .prod-card { flex-basis: calc(33.333% - 14px); }
+  }
+  @media (min-width: 1000px) {
+    .prod-card { flex-basis: calc(25% - 16px); }
+  }
+  @media (max-width: 860px) {
+    .nav-links { display:none; }
+    .burger { display:block; }
+    .toolbar {
+      position: fixed; left:0; right:0; bottom:0; z-index: 40;
+      box-shadow: 0 -4px 16px rgba(20,18,15,0.12);
+      border-top: 1px solid var(--line-light); border-bottom:none;
+      padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    .toolbar-spacer { display:block; height: 76px; }
+    .chip-row { overflow-x:auto; flex-wrap:nowrap; max-width: 60vw; }
+    .chip { flex-shrink:0; }
+  }
+  @media (max-width: 560px) {
+    .page-head { padding: 26px 20px 0; }
+    .toolbar { padding-left: 20px; padding-right: 20px; }
+    .prod-section { padding: 24px 20px 56px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="announce">Livraison Cameroun &amp; international · Paiement à la livraison disponible · ★ 4.8/5 sur 300+ avis</div>
+
+  <header class="site">
+    <div class="nav-row">
+      <div class="logo">KEMI<span>·</span>SHOES</div>
+      <nav class="nav-links">
+        <a href="#" class="active">Homme</a>
+        <a href="#">Femme</a>
+        <a href="#">Nouveautés</a>
+        <a href="#">Notre histoire</a>
+      </nav>
+      <div class="nav-icons">
+        <span>🔍</span>
+        <span>👤</span>
+        <span>🛒</span>
+        <button class="burger">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-head">
+    <div class="wrap">
+      <div class="breadcrumb"><a href="#">Accueil</a> / Boutique</div>
+      <div class="page-title-row">
+        <h1 class="display page-title">Toutes les sandales</h1>
+        <span class="result-count-top">42 articles</span>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active">Tous</button>
+        <button class="tab-btn">Homme</button>
+        <button class="tab-btn">Femme</button>
+        <button class="tab-btn">Nouveautés</button>
+        <button class="tab-btn">Couple &amp; Enfant</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar" style="max-width:1180px; margin:0 auto;">
+    <button class="filter-trigger" id="openDrawer">⚙ Filtrer &amp; trier <span class="count">2</span></button>
+    <div class="chip-row">
+      <span class="chip">Femme <button>✕</button></span>
+      <span class="chip">6 000–12 000f <button>✕</button></span>
+      <span class="chip" style="border-style:dashed; color:rgba(20,18,15,0.5);">Prix croissant</span>
+    </div>
+  </div>
+  <div class="toolbar-spacer"></div>
+
+  <section class="prod-section">
+    <div class="wrap" style="padding:0;">
+      <div class="prod-grid">
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Karibu</span></div><span class="price-tag">6 500–8 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Karibu.</div><div class="prod-sub">Babouche semelle plateforme</div><div class="swatch-row"><span></span><span></span><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Mapubi</span></div><span class="price-tag">6 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Mapubi.</div><div class="prod-sub">Du confort comme du coton</div><div class="swatch-row"><span></span><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Jani</span></div><span class="price-tag">6 500–8 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Jani.</div><div class="prod-sub">Élégante et légère</div><div class="swatch-row"><span></span><span></span><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Gabi</span></div><span class="price-tag">12 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Gabi.</div><div class="prod-sub">Design with cork</div><div class="swatch-row"><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Jamani black</span></div><span class="price-tag">12 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Jamani black</div><div class="prod-sub">Sandale à boucle</div><div class="swatch-row"><span></span><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Two butterflies</span></div><span class="price-tag">6 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Two butterflies</div><div class="prod-sub">Nœud satin</div><div class="swatch-row"><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Spartiate</span></div><span class="price-tag">18 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Spartiate</div><div class="prod-sub">Sandale en cuir pour lui</div><div class="swatch-row"><span></span></div></div>
+        </div>
+
+        <div class="prod-card">
+          <div class="prod-media"><div class="ph"><span class="ph-label">Half leather</span></div><span class="price-tag">15 000f</span><span class="wishlist-btn">♡</span></div>
+          <div class="prod-info"><div class="prod-name">Half leather</div><div class="prod-sub">Double bride cuir</div><div class="swatch-row"><span></span><span></span></div></div>
+        </div>
+
+      </div>
+
+      <div class="load-zone" id="loadZone">
+        <div class="spinner-row" id="spinnerRow">
+          <div class="spinner"></div>
+          <span>Chargement automatique…</span>
+        </div>
+        <button class="btn btn-outline load-more-btn" id="loadMoreBtn">Charger plus (34 articles restants)</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site">
+    <div class="wrap">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="logo">KEMI<span>·</span>SHOES</div>
+          <p>Sandales en cuir assemblées à la main à Douala, Cameroun. Livraison nationale et internationale.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Boutique</h4>
+          <a href="#">Sandales Homme</a>
+          <a href="#">Sandales Femme</a>
+          <a href="#">Nouveautés</a>
+          <a href="#">Couple &amp; Enfant</a>
+        </div>
+        <div class="footer-col">
+          <h4>Aide</h4>
+          <a href="#">FAQ</a>
+          <a href="#">Livraison &amp; retours</a>
+          <a href="#">Guide des tailles</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <a href="#">WhatsApp</a>
+          <a href="#">Instagram</a>
+          <a href="#">Facebook</a>
+          <a href="#">pk11, Douala</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 KEMI SHOES — Tous droits réservés</span>
+        <span>Mentions légales · CGV · Politique de confidentialité</span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-head">
+      <h3>Filtrer &amp; trier</h3>
+      <button class="drawer-close" id="closeDrawer">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-group">
+        <div class="drawer-group-title">Trier par</div>
+        <label class="opt-row"><span class="radio"></span>Nouveautés</label>
+        <label class="opt-row"><span class="radio sel"></span>Prix croissant</label>
+        <label class="opt-row"><span class="radio"></span>Prix décroissant</label>
+        <label class="opt-row"><span class="radio"></span>Popularité</label>
+      </div>
+      <div class="drawer-group">
+        <div class="drawer-group-title">Genre</div>
+        <label class="opt-row"><span class="checkbox"></span>Homme</label>
+        <label class="opt-row"><span class="checkbox sel"></span>Femme</label>
+        <label class="opt-row"><span class="checkbox"></span>Enfant</label>
+      </div>
+      <div class="drawer-group">
+        <div class="drawer-group-title">Taille</div>
+        <div class="size-chips">
+          <span class="size-chip">38</span><span class="size-chip">39</span><span class="size-chip sel">40</span>
+          <span class="size-chip">41</span><span class="size-chip">42</span><span class="size-chip">43</span>
+        </div>
+      </div>
+      <div class="drawer-group">
+        <div class="drawer-group-title">Couleur</div>
+        <div class="color-swatches">
+          <span class="sw sel" style="background:#1a1512;"></span>
+          <span class="sw" style="background:#8B4A2B;"></span>
+          <span class="sw" style="background:#D2531E;"></span>
+          <span class="sw" style="background:#efe6da;"></span>
+        </div>
+      </div>
+      <div class="drawer-group">
+        <div class="drawer-group-title">Prix</div>
+        <div class="range-track"><div class="fill"></div><div class="handle" style="left:15%;"></div><div class="handle" style="left:65%;"></div></div>
+        <div class="price-range">6 000f — 12 000f</div>
+      </div>
+      <div class="drawer-group" style="border-bottom:none;">
+        <div class="drawer-group-title">Collection</div>
+        <label class="opt-row"><span class="checkbox"></span>Design With Cork</label>
+        <label class="opt-row"><span class="checkbox"></span>Eva Collection</label>
+        <label class="opt-row"><span class="checkbox"></span>Couple Set</label>
+      </div>
+    </div>
+    <div class="drawer-foot">
+      <a class="reset">Réinitialiser</a>
+      <button class="btn btn-primary apply">Voir 42 résultats</button>
+    </div>
+  </div>
+
+<script>
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('drawerOverlay');
+  function openD(){ drawer.classList.add('open'); overlay.classList.add('open'); }
+  function closeD(){ drawer.classList.remove('open'); overlay.classList.remove('open'); }
+  document.getElementById('openDrawer').addEventListener('click', openD);
+  document.getElementById('closeDrawer').addEventListener('click', closeD);
+  overlay.addEventListener('click', closeD);
+
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  let autoLoads = 0;
+  const MAX_AUTO = 3;
+  window.addEventListener('scroll', function onScroll(){
+    if (autoLoads >= MAX_AUTO) { window.removeEventListener('scroll', onScroll); return; }
+    const zone = document.getElementById('loadZone');
+    const rect = zone.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 200) {
+      autoLoads++;
+      if (autoLoads >= MAX_AUTO) {
+        document.getElementById('spinnerRow').style.display = 'none';
+        document.getElementById('loadMoreBtn').classList.add('show');
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
