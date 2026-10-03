@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Check, ChevronRight } from "lucide-react";
@@ -12,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { getI18n } from "@/locales/server";
 import { formatPrice, type Locale } from "@/lib/catalog";
 import { getCatalogProductBySlug, getCatalogProducts } from "@/lib/catalog-api";
+import { ProductGallery } from "@/components/catalog/product-gallery";
 import { ProductPurchasePanel } from "@/components/catalog/product-purchase-panel";
 import { ProductCard } from "@/components/catalog/product-card";
 import { ProductReviews } from "@/components/catalog/product-reviews";
@@ -41,7 +41,7 @@ export default async function ProductPage({
   const relatedProducts = (await getCatalogProducts())
     .filter((item) => item.slug.fr !== product.slug.fr)
     .slice(0, 4);
-  const galleryImages = [product.image];
+  const galleryImages = product.images.length ? product.images : [product.image];
 
   return (
     <main className="product-page">
@@ -54,34 +54,7 @@ export default async function ProductPage({
       </div>
       <section className="product-layout section">
         <div className="product-gallery">
-          <div className="product-main-image">
-            <Image
-              src={galleryImages[0]}
-              alt={product.name[locale]}
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, 55vw"
-            />
-            <span className="gallery-caption">Photo produit — vue 1</span>
-            <span className="gallery-dots">
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-          </div>
-          <div className="product-thumbnails">
-            {galleryImages.map((image, index) => (
-              <button
-                type="button"
-                className="product-thumbnail active"
-                key={image}
-                aria-label={`Vue ${index + 1} de ${product.name[locale]}`}
-              >
-                <Image src={image} alt="" fill sizes="84px" />
-              </button>
-            ))}
-          </div>
+          <ProductGallery images={galleryImages} name={product.name[locale]} />
           <Badge variant="secondary" className="product-handmade">
             {t("product.handmade")}
           </Badge>

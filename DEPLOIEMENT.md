@@ -85,6 +85,22 @@ npm run db:init
 ```
 
 Le schéma est aussi appliqué automatiquement à chaque démarrage du serveur.
+
+**Catalogue de démarrage** — peuple la base à partir des photos de `backend/images_demo/` :
+
+```bash
+npm run db:seed            # idempotent : n'ajoute que ce qui manque
+npm run db:seed -- --force # réapplique aussi noms, prix, tailles et photos des produits existants
+```
+
+- Chaque photo est prise en compte : les vues d'un même modèle (`nom.jpg`, `nom_1.jpg`, `nom_2.jpg`)
+  deviennent les images d'un seul produit (25 produits / 39 photos), copiées dans `uploads/products/`.
+- Les photos atelier / fondatrice sont enregistrées comme visuels de marque (table `MediaAsset`,
+  route publique `GET /api/v1/media`) et affichées par l'accueil et « Notre histoire ».
+- Noms FR/EN, descriptions, catégories, prix, couleurs et tailles : `backend/scripts/seed-demo.data.js`
+  (à ajuster avant le seed si besoin). Une photo ajoutée sans fiche dans ce fichier est créée
+  en **brouillon** avec un nom déduit du fichier, pour qu'aucune image ne soit ignorée.
+- Le dossier `images_demo/` doit donc être déployé avec le backend (au moins pour ce premier seed).
 `npm run db:reset` **efface toutes les données** : ne jamais l'exécuter en production.
 
 ### 2.4 Premier administrateur
@@ -383,4 +399,5 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | 👑👑 `PATCH /users/:id/role` *(nouvelle)* | Admin › Paramètres › Utilisateurs & rôles |
 | `GET /settings` *(nouvelle)* | Pied de page (WhatsApp, réseaux, adresse) |
 | 👑👑 `PUT /settings` *(nouvelle)* | Admin › Paramètres › Informations boutique |
+| `GET /media` *(nouvelle)* | Accueil, « Notre histoire » (visuels de marque) |
 | `GET /health`, `GET /metrics` | Supervision (hors frontend) |

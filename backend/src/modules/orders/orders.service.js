@@ -102,11 +102,14 @@ export async function createOrder({ items, deliveryZoneId, address, guest, userI
         paymentMethod, subtotalFcfa, zone.feeFcfa, totalFcfa,
       ]
     );
-    await Promise.all(resolvedItems.map((item) => query(
-      `INSERT INTO OrderItem (id, orderId, productId, productNameFr, unitPriceFcfa, quantity, size, color, customColor, customMaterial)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [randomUUID(), orderId, item.productId, item.productNameFr, item.unitPriceFcfa, item.quantity, item.size, item.color, item.customColor, item.customMaterial]
-    )));
+    // Séquentiel : un client pg en transaction ne traite qu'une requête à la fois.
+    for (const item of resolvedItems) {
+      await query(
+        `INSERT INTO OrderItem (id, orderId, productId, productNameFr, unitPriceFcfa, quantity, size, color, customColor, customMaterial)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [randomUUID(), orderId, item.productId, item.productNameFr, item.unitPriceFcfa, item.quantity, item.size, item.color, item.customColor, item.customMaterial]
+      );
+    }
     await query(`INSERT INTO OrderStatusEvent (id, orderId, status, note) VALUES (?, ?, 'PENDING', 'Commande créée')`, [randomUUID(), orderId]);
   });
 

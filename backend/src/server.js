@@ -22,6 +22,7 @@ import paymentsRoutes from "./modules/payments/payments.routes.js";
 import addressesRoutes from "./modules/addresses/addresses.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
+import mediaRoutes from "./modules/media/media.routes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -58,6 +59,7 @@ app.use("/api/v1/payments", paymentsRoutes);
 app.use("/api/v1/addresses", addressesRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/settings", settingsRoutes);
+app.use("/api/v1/media", mediaRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 

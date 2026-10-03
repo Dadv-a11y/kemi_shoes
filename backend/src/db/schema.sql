@@ -208,3 +208,13 @@ CREATE TABLE IF NOT EXISTS Notification (
   createdAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_notification_user ON Notification(userId, createdAt DESC);
+-- Visuels de marque (atelier, fondatrice…) affichés par le site, hors catalogue.
+CREATE TABLE IF NOT EXISTS MediaAsset (
+  id        TEXT PRIMARY KEY,
+  key       TEXT NOT NULL UNIQUE,
+  category  TEXT NOT NULL DEFAULT 'brand',
+  url       TEXT NOT NULL,
+  altFr     TEXT,
+  altEn     TEXT,
+  createdAt TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);

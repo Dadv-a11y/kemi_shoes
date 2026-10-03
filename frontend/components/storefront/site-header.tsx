@@ -28,6 +28,12 @@ export function SiteHeader() {
   const locale = pathname.split("/").filter(Boolean)[0] === "en" ? "en" : "fr";
   const localized = (path: string) => `/${locale}${path}`;
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [storePhone, setStorePhone] = useState("");
+  useEffect(() => {
+    backendRequest<{ phone?: string }>("/settings")
+      .then((settings) => setStorePhone(settings.phone ?? ""))
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     backendRequest<Notification[]>("/notifications")
       .then(setNotifications)
@@ -56,7 +62,7 @@ export function SiteHeader() {
     <>
       <div className="announcement">
         Livraison à Douala et partout au Cameroun · Paiement à la livraison
-        disponible · +237 6XX XXX XXX
+        disponible{storePhone ? ` · ${storePhone}` : ""}
       </div>
       <header className="site-header">
         <Link

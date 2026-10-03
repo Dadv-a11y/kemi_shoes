@@ -124,25 +124,7 @@ const overviewKpis: {
 
 const topProducts: { name: string; sales: number; percent: number }[] = [];
 
-const recentOrders: {
-  id: string;
-  client: string;
-  status: OrderStatus;
-  total: string;
-}[] = [];
-
 const alerts: string[] = [];
-
-const allOrders: {
-  id: string;
-  client: string;
-  date: string;
-  zone: string;
-  status: OrderStatus;
-  total: string;
-}[] = [];
-
-const defaultProducts: Product[] = [];
 
 const availableSizes = ["38", "39", "40", "41", "42", "43"];
 
@@ -166,7 +148,7 @@ export function AdminDashboard() {
     "card",
   );
   const [productLang, setProductLang] = useState<"fr" | "en">("fr");
-  const [products, setProducts] = useState<Product[]>(defaultProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [adminOrders, setAdminOrders] = useState<AdminOrder[]>([]);
   const [adminReviews, setAdminReviews] = useState<AdminReview[]>([]);
   const [contentPages, setContentPages] = useState<ContentPage[]>([]);

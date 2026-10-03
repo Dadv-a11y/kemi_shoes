@@ -1,7 +1,7 @@
 import { type Locale, type Product, type ProductCategory } from "@/lib/catalog";
 import { resolveMediaUrl } from "@/lib/backend-api";
 
-type CatalogApiProduct = {
+export type CatalogApiProduct = {
   id: string;
   slugFr: string;
   slugEn: string;
@@ -29,9 +29,10 @@ function mapCategory(category: string): ProductCategory {
   return "nouveautes";
 }
 
-function mapProduct(product: CatalogApiProduct): Product {
+export function mapProduct(product: CatalogApiProduct): Product {
   const images = product.images ?? [];
-  const image = resolveMediaUrl(images.find((item) => item.isMain)?.url ?? images[0]?.url ?? "/logo_kemi_shoes.jpg");
+  const ordered = [...images].sort((a, b) => Number(Boolean(b.isMain)) - Number(Boolean(a.isMain))).map((item) => resolveMediaUrl(item.url));
+  const image = ordered[0] ?? "/logo_kemi_shoes.jpg";
   const sizes = product.sizes ?? [];
   return {
     id: product.id,
@@ -39,6 +40,7 @@ function mapProduct(product: CatalogApiProduct): Product {
     name: { fr: product.nameFr, en: product.nameEn },
     price: product.price,
     image,
+    images: ordered.length ? ordered : [image],
     category: mapCategory(product.category),
     colors: (product.colors ?? []).map((color) => color.hex),
     material: { fr: "Cuir", en: "Leather" },
@@ -65,14 +67,23 @@ export async function getCatalogProducts(category?: ProductCategory): Promise<Pr
     nouveautes: "Nouveautes",
     "couple-enfant": "Couple-Enfant",
   }[category] : undefined;
-  const query = backendCategory ? `?category=${encodeURIComponent(backendCategory)}` : "";
+  // Le catalogue public n'affiche que les produits publiés (pas les brouillons).
+  const query = `?status=active&pageSize=100${backendCategory ? `&category=${encodeURIComponent(backendCategory)}` : ""}`;
   const result = await request<CatalogListResponse>(`/products${query}`);
   return result?.items.map(mapProduct) ?? [];
 }
 
 export async function getCatalogProductBySlug(slug: string, locale: Locale): Promise<Product | undefined> {
   const result = await request<CatalogApiProduct>(`/products/slug/${encodeURIComponent(slug)}?locale=${locale}`);
-  if (result) return mapProduct(result);
+  if (result && result.status !== "draft") return mapProduct(result);
 
   return undefined;
+}
+
+export type BrandMedia = { key: string; url: string; altFr: string | null; altEn: string | null };
+
+/** Visuels de marque (atelier, fondatrice) indexés par clé — voir backend/scripts/seed-demo.data.js. */
+export async function getBrandMedia(): Promise<Record<string, BrandMedia>> {
+  const result = await request<BrandMedia[]>("/media?category=brand");
+  return Object.fromEntries((result ?? []).map((media) => [media.key, { ...media, url: resolveMediaUrl(media.url) }]));
 }

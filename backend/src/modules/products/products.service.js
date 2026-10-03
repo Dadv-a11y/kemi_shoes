@@ -91,18 +91,25 @@ export async function createProduct(input) {
         data.colorCustomizable !== false ? 1 : 0, data.materialCustomizable !== false ? 1 : 0,
       ]
     );
-    await Promise.all(images.map((img, i) => query(
-      `INSERT INTO ProductImage (id, productId, url, position, isMain) VALUES (?, ?, ?, ?, ?)`,
-      [randomUUID(), id, img.url, i, img.isMain ? 1 : (i === 0 ? 1 : 0)]
-    )));
-    await Promise.all(colors.map((c) => query(
-      `INSERT INTO ProductColor (id, productId, name, hex) VALUES (?, ?, ?, ?)`,
-      [randomUUID(), id, c.name, c.hex]
-    )));
-    await Promise.all(sizes.map((s) => query(
-      `INSERT INTO ProductSize (id, productId, size, available) VALUES (?, ?, ?, ?)`,
-      [randomUUID(), id, s.size, s.available === false ? 0 : 1]
-    )));
+    // Séquentiel : un client pg en transaction ne traite qu'une requête à la fois.
+    for (const [i, img] of images.entries()) {
+      await query(
+        `INSERT INTO ProductImage (id, productId, url, position, isMain) VALUES (?, ?, ?, ?, ?)`,
+        [randomUUID(), id, img.url, i, img.isMain ? 1 : (i === 0 ? 1 : 0)]
+      );
+    }
+    for (const c of colors) {
+      await query(
+        `INSERT INTO ProductColor (id, productId, name, hex) VALUES (?, ?, ?, ?)`,
+        [randomUUID(), id, c.name, c.hex]
+      );
+    }
+    for (const s of sizes) {
+      await query(
+        `INSERT INTO ProductSize (id, productId, size, available) VALUES (?, ?, ?, ?)`,
+        [randomUUID(), id, s.size, s.available === false ? 0 : 1]
+      );
+    }
   });
 
   const product = await getProductById(id);
@@ -131,24 +138,30 @@ export async function updateProduct(id, input) {
 
     if (images) {
       await query(`DELETE FROM ProductImage WHERE productId = ?`, [id]);
-      await Promise.all(images.map((img, i) => query(
+      for (const [i, img] of images.entries()) {
+      await query(
         `INSERT INTO ProductImage (id, productId, url, position, isMain) VALUES (?, ?, ?, ?, ?)`,
         [randomUUID(), id, img.url, i, img.isMain ? 1 : (i === 0 ? 1 : 0)]
-      )));
+      );
+    }
     }
     if (colors) {
       await query(`DELETE FROM ProductColor WHERE productId = ?`, [id]);
-      await Promise.all(colors.map((c) => query(
+      for (const c of colors) {
+      await query(
         `INSERT INTO ProductColor (id, productId, name, hex) VALUES (?, ?, ?, ?)`,
         [randomUUID(), id, c.name, c.hex]
-      )));
+      );
+    }
     }
     if (sizes) {
       await query(`DELETE FROM ProductSize WHERE productId = ?`, [id]);
-      await Promise.all(sizes.map((s) => query(
+      for (const s of sizes) {
+      await query(
         `INSERT INTO ProductSize (id, productId, size, available) VALUES (?, ?, ?, ?)`,
         [randomUUID(), id, s.size, s.available === false ? 0 : 1]
-      )));
+      );
+    }
     }
   });
 
