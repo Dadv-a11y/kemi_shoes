@@ -1,4 +1,5 @@
 import { setupTestDb } from '../testDb.js';
+import { updateProductSchema } from '../../src/modules/products/products.schema.js';
 import {
   createProduct, updateProduct, deleteProduct, getProductById,
   getProductBySlug, listProducts, setSizeAvailability,
@@ -24,7 +25,7 @@ describe('products.service', () => {
     const product = await createProduct(sampleInput);
     expect(product.slugFr).toBe('multicolore-black-and-white');
     expect(product.images).toHaveLength(2);
-    expect(product.images[0].isMain).toBe(1);
+    expect(product.images[0].isMain).toBe(true);
     expect(product.colors).toHaveLength(1);
     expect(product.sizes.map((s) => s.size)).toEqual(['40', '41']);
   });
@@ -60,7 +61,7 @@ describe('products.service', () => {
     const created = await createProduct(sampleInput);
     const updated = await setSizeAvailability(created.id, '40', false);
     const size40 = updated.sizes.find((s) => s.size === '40');
-    expect(size40.available).toBe(0);
+    expect(size40.available).toBe(false);
     expect(updated.sizes).toHaveLength(2);
   });
 
@@ -82,5 +83,20 @@ describe('products.service', () => {
     expect(draft.items[0].nameFr).toBe('Jani.');
 
     expect((await listProducts({})).total).toBe(2);
+  });
+
+  test('un produit lu est accepté tel quel par le schéma de mise à jour (back-office)', async () => {
+    const created = await createProduct(sampleInput);
+    const product = await getProductById(created.id);
+    const parsed = updateProductSchema.safeParse({
+      params: { id: product.id },
+      body: {
+        colorCustomizable: product.colorCustomizable,
+        materialCustomizable: product.materialCustomizable,
+        images: product.images.map(({ url, isMain }) => ({ url, isMain })),
+        sizes: product.sizes.map(({ size, available }) => ({ size, available })),
+      },
+    });
+    expect(parsed.success).toBe(true);
   });
 });

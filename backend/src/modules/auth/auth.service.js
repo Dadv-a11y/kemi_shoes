@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { get, run, all } from '../../db/client.js';
 import { hashSecret, verifySecret } from '../../config/password.js';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/tokens.js';
+import { createSession, rotateSession, revokeSession, revokeAllSessions, sessionIdFromTokens } from './session.service.js';
 import { unauthorized, conflict } from '../../middleware/errorHandler.js';
 import { requestOtp as sendOtp, verifyOtp as checkOtp } from './otp.service.js';
 import { mailer } from '../notifications/mailer.js';
@@ -14,12 +14,9 @@ function toPublicUser(user) {
   return safe;
 }
 
-function issueTokens(user) {
-  return {
-    accessToken: signAccessToken(user),
-    refreshToken: signRefreshToken(user),
-    user: toPublicUser(user),
-  };
+// Chaque connexion ouvre une session révocable (voir session.service.js).
+async function issueTokens(user) {
+  return { ...(await createSession(user)), user: toPublicUser(user) };
 }
 
 /**
@@ -130,15 +127,17 @@ export async function findOrCreateOAuthUser({ provider, providerId, email, name 
 // ---------------------------------------------------------------------------
 
 export async function refreshSession(refreshToken) {
-  let payload;
-  try {
-    payload = verifyRefreshToken(refreshToken);
-  } catch {
-    throw unauthorized('Session expirée, reconnectez-vous.');
-  }
-  const user = await get(`SELECT * FROM User WHERE id = ?`, [payload.sub]);
-  if (!user) throw unauthorized('Compte introuvable.');
-  return issueTokens(user);
+  const { user, ...tokens } = await rotateSession(refreshToken);
+  return { ...tokens, user: toPublicUser(user) };
+}
+
+export async function logout(tokens) {
+  const sessionId = sessionIdFromTokens(tokens);
+  if (sessionId) await revokeSession(sessionId);
+}
+
+export async function logoutEverywhere(userId) {
+  await revokeAllSessions(userId);
 }
 
 export async function getUserById(id) {

@@ -62,6 +62,11 @@ arrête le serveur avec un message explicite.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | recommandé | Emails transactionnels. Sans `SMTP_HOST`, les emails sont seulement journalisés |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | non | Active « Continuer avec Google » |
 | `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` | non | Active « Continuer avec Facebook » |
+| `SMS_PROVIDER` / `WHATSAPP_PROVIDER` | non | Envoi des codes OTP (`backend/src/modules/notifications/sms/README.md`). Défaut en production : `none` → la connexion par téléphone est masquée sur le site. `console` (code affiché dans la console) est réservé au développement et refusé en production |
+| `COOKIE_SAMESITE` | non | `lax` (défaut) si le site et l'API partagent le même domaine parent (ex. `kemishoes.com` et `api.kemishoes.com`) ; `none` si l'API est sur un domaine sans rapport (impose HTTPS) |
+| `COOKIE_DOMAIN` | non | Domaine des cookies de session (vide = domaine de l'API, recommandé) |
+| `COOKIE_SECURE` | non | `true` par défaut en production (cookies uniquement en HTTPS) |
+| `AUTH_RATE_LIMIT` | non | Tentatives de connexion / OTP par IP et par 15 min (`10`) |
 | `CAMPAY_BASE_URL` | oui | `https://demo.campay.net/api` (test) puis `https://www.campay.net/api` (live) |
 | `CAMPAY_ACCESS_TOKEN` | oui* | Token permanent de l'application CamPay (prioritaire) |
 | `CAMPAY_USERNAME` / `CAMPAY_APP_PASSWORD` | oui* | Alternative au token permanent : un token temporaire est demandé et mis en cache |
@@ -73,6 +78,12 @@ arrête le serveur avec un message explicite.
 \* `CAMPAY_ACCESS_TOKEN` **ou** le couple `CAMPAY_USERNAME`/`CAMPAY_APP_PASSWORD`.
 Sans aucun identifiant CamPay, le Mobile Money passe en mode simulé et la carte est désactivée
 (comportement utilisé en développement et dans les tests).
+
+**Sessions en cookies.** Les jetons de connexion sont des cookies `HttpOnly` posés par l'API
+(`kemi_at`, envoyé à toute l'API ; `kemi_rt`, limité à `/api/v1/auth`) : le JavaScript du site n'y a
+jamais accès. Le site appelle l'API avec `credentials: "include"` ; `CORS_ORIGINS` doit donc contenir
+l'origine exacte du site, et les requêtes qui modifient des données depuis une autre origine sont
+refusées (protection CSRF).
 
 > Attention aux valeurs avec espaces ou caractères spéciaux (`SMTP_PASS`, `DATABASE_URL`) :
 > entourez-les de guillemets simples dans le fichier `.env`.
@@ -290,7 +301,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    # Métriques Prometheus : ne pas exposer publiquement
+    # Métriques Prometheus : l'API exige déjà un jeton ADMIN (Authorization: Bearer …) ;
+    # on les garde en plus hors d'Internet.
     location /metrics { allow 127.0.0.1; deny all; proxy_pass http://127.0.0.1:4000; }
 }
 ```
@@ -400,4 +412,6 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | `GET /settings` *(nouvelle)* | Pied de page (WhatsApp, réseaux, adresse) |
 | 👑👑 `PUT /settings` *(nouvelle)* | Admin › Paramètres › Informations boutique |
 | `GET /media` *(nouvelle)* | Accueil, « Notre histoire » (visuels de marque) |
-| `GET /health`, `GET /metrics` | Supervision (hors frontend) |
+| `GET /health` | Supervision (hors frontend) |
+| 👑 `GET /metrics` | Supervision Prometheus — jeton d'un compte ADMIN requis |
+| `POST /auth/logout`, `POST /auth/logout-all` *(nouvelles)* | Compte › Se déconnecter (révocation de la session côté serveur) |

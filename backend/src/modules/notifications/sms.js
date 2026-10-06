@@ -1,46 +1,35 @@
-import { logger } from '../../config/logger.js';
-import { isTest } from '../../config/env.js';
+import { getSmsProvider, getWhatsappProvider } from './sms/sms.factory.js';
 
 /**
- * Abstraction d'envoi de SMS — même logique "ports & adapters" que les
- * passerelles de paiement. Aujourd'hui : implémentation "log" (aucun SMS réel
- * envoyé, le code atterrit dans les logs applicatifs pour le développement).
- * Demain : brancher un vrai fournisseur (Twilio, ou un agrégateur local) en
- * remplaçant uniquement `send()` ci-dessous, sans toucher au reste de l'app.
+ * Point d'entrée historique (otp.service, tests) : délègue au fournisseur
+ * configuré (sms/sms.factory.js). `null` = canal non branché.
  */
-const sentMessages = []; // utilisé uniquement par les tests pour inspecter les envois
-
 export const smsSender = {
-  async send(phone, message) {
-    if (isTest) {
-      sentMessages.push({ phone, message });
-      return { provider: 'mock', accepted: true };
-    }
-    logger.info({ phone }, 'sms_dispatch (mock provider — brancher un vrai fournisseur SMS en prod)');
-    // eslint-disable-next-line no-console
-    console.log(`[SMS -> ${phone}] ${message}`);
-    return { provider: 'mock', accepted: true };
+  get available() {
+    return Boolean(getSmsProvider());
   },
-
-  // Réservé aux tests.
-  _sentMessages: sentMessages,
+  send(phone, message) {
+    const provider = getSmsProvider();
+    if (!provider) throw new Error('sms_provider_not_configured');
+    return provider.send(phone, message);
+  },
+  // Tests (SMS_PROVIDER=memory) : messages envoyés, SMS et repli WhatsApp confondus.
+  get _sentMessages() {
+    return [...(getSmsProvider()?.sent ?? []), ...(getWhatsappProvider()?.sent ?? [])];
+  },
   _reset() {
-    sentMessages.length = 0;
+    getSmsProvider()?.reset?.();
+    getWhatsappProvider()?.reset?.();
   },
 };
 
-/**
- * Repli WhatsApp si l'envoi SMS échoue — même interface, message identique.
- * Architecture volontairement symétrique au SMS pour rester simple à brancher
- * sur l'API WhatsApp Business plus tard.
- */
 export const whatsappSender = {
-  async send(phone, message) {
-    if (isTest) {
-      sentMessages.push({ phone, message, channel: 'whatsapp' });
-      return { provider: 'mock-whatsapp', accepted: true };
-    }
-    logger.info({ phone }, 'whatsapp_dispatch (mock provider)');
-    return { provider: 'mock-whatsapp', accepted: true };
+  get available() {
+    return Boolean(getWhatsappProvider());
+  },
+  send(phone, message) {
+    const provider = getWhatsappProvider();
+    if (!provider) throw new Error('whatsapp_provider_not_configured');
+    return provider.send(phone, message);
   },
 };

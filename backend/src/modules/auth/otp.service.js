@@ -1,7 +1,9 @@
 import { randomUUID, randomInt, createHmac } from 'node:crypto';
 import { get, run } from '../../db/client.js';
 import { env } from '../../config/env.js';
-import { badRequest } from '../../middleware/errorHandler.js';
+import { AppError, badRequest } from '../../middleware/errorHandler.js';
+import { logger } from '../../config/logger.js';
+import { isPhoneAuthAvailable } from '../notifications/sms/sms.factory.js';
 import { smsSender, whatsappSender } from '../notifications/sms.js';
 import { otpRequestsTotal } from '../../config/metrics.js';
 
@@ -22,23 +24,49 @@ function generateSixDigitCode() {
  * retourné à l'appelant HTTP — uniquement transmis via le canal SMS/WhatsApp.
  */
 export async function requestOtp(phone) {
+  // Aucun fournisseur SMS/WhatsApp branché (ex. production sans fournisseur choisi).
+  if (!isPhoneAuthAvailable()) {
+    throw new AppError('La connexion par téléphone n’est pas disponible pour le moment.', 503, 'PHONE_AUTH_UNAVAILABLE');
+  }
+  // Un nouveau code n'est émis qu'une fois le précédent expiré (ou épuisé) : tant
+  // qu'il est valable, on renvoie son échéance sans renvoyer de SMS.
+  const pending = await get(
+    `SELECT expiresAt FROM OtpCode WHERE phone = ? AND consumed = 0 AND attempts < ? ORDER BY createdAt DESC LIMIT 1`,
+    [phone, env.OTP_MAX_ATTEMPTS]
+  );
+  if (pending && new Date(pending.expiresAt).getTime() > Date.now()) {
+    return { expiresAt: new Date(pending.expiresAt).toISOString(), resent: false };
+  }
+
   const code = generateSixDigitCode();
   const expiresAt = new Date(Date.now() + env.OTP_TTL_MINUTES * 60 * 1000).toISOString();
 
+  const id = randomUUID();
   await run(
     `INSERT INTO OtpCode (id, phone, codeHash, expiresAt) VALUES (?, ?, ?, ?)`,
-    [randomUUID(), phone, hashCode(phone, code), expiresAt]
+    [id, phone, hashCode(phone, code), expiresAt]
   );
 
+  // SMS d'abord, WhatsApp en repli : seuls les canaux branchés sont essayés.
   const message = `Votre code KEMI SHOES : ${code} (valable ${env.OTP_TTL_MINUTES} minutes)`;
-  try {
-    await smsSender.send(phone, message);
-  } catch {
-    await whatsappSender.send(phone, message);
+  let delivered = false;
+  for (const channel of [smsSender, whatsappSender].filter((candidate) => candidate.available)) {
+    try {
+      await channel.send(phone, message);
+      delivered = true;
+      break;
+    } catch (err) {
+      logger.error({ err, phone }, 'otp_delivery_failed');
+    }
+  }
+  if (!delivered) {
+    // Code jamais reçu : on le supprime pour permettre une nouvelle demande immédiate.
+    await run(`DELETE FROM OtpCode WHERE id = ?`, [id]);
+    throw new AppError('Impossible d’envoyer le code pour le moment, réessayez.', 502, 'OTP_DELIVERY_FAILED');
   }
   otpRequestsTotal.inc();
 
-  return { expiresAt };
+  return { expiresAt, resent: true };
 }
 
 /**

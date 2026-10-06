@@ -5,13 +5,13 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getCart, saveCart, type CartItem } from "@/lib/cart";
-import { formatPrice, type Locale } from "@/lib/catalog";
+import { formatPrice, isCustomMaterial, type Locale } from "@/lib/catalog";
 import { backendRequest } from "@/lib/backend-api";
 import { PaymentTracker, type PaymentSession } from "@/components/cart/payment-tracker";
 
 type Labels = Record<string, string>;
 type PaymentMethod = "mm" | "card" | "cod";
-type PaymentErrors = Partial<Record<"mobileNumber", string>>;
+type PaymentErrors = Partial<Record<"mobileNumber" | "method", string>>;
 type DeliveryDetails = { fullName: string; phone: string; email: string; country: string; city: string; neighborhood: string; address: string };
 type DeliveryErrors = Partial<Record<keyof DeliveryDetails, string>>;
 type DeliveryZone = { id: string; country: string; regionOrCity: string | null; feeFcfa: number; etaMinHours: number; etaMaxHours: number; codAvailable: boolean; paymentMethods: string[]; active: boolean };
@@ -38,7 +38,12 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
   const [step, setStep] = useState(1);
   const [payment, setPayment] = useState<PaymentMethod>("mm");
   const [accepted, setAccepted] = useState(false);
-  const [items] = useState<CartItem[]>(() => getCart());
+  // Panier lu après le montage : le rendu serveur n'a pas accès au cookie (évite une erreur d'hydratation).
+  const [items, setItems] = useState<CartItem[]>([]);
+  useEffect(() => {
+    const sync = () => setItems(getCart());
+    sync();
+  }, []);
   const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails>({ fullName: "", phone: "", email: "", country: "Cameroun", city: "", neighborhood: "", address: "" });
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [mobileNumber, setMobileNumber] = useState("");
@@ -52,6 +57,9 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
   const selectedZone = zones.find((zone) => zone.id === zoneId);
   const shipping = selectedZone?.feeFcfa ?? 0;
+  // Moyens de paiement autorisés par la zone choisie (le backend refuse les autres).
+  const allowedMethods = selectedZone ? selectedZone.paymentMethods : ["mobile_money", "card", "cod"];
+  const codAllowed = allowedMethods.includes("cod") && (selectedZone?.codAvailable ?? true);
   const total = subtotal + shipping;
   const paymentLabel = payment === "mm" ? labels.mobileMoney : payment === "card" ? labels.card : labels.cod;
   const goTo = (nextStep: number) => setStep(Math.min(4, Math.max(1, nextStep)));
@@ -76,6 +84,8 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
   const validatePayment = () => {
     const errors: PaymentErrors = {};
     if (payment === "mm" && !mobileNumber.trim()) errors.mobileNumber = labels.required;
+    const selectedKey = payment === "mm" ? "mobile_money" : payment;
+    if (selectedKey === "cod" ? !codAllowed : !allowedMethods.includes(selectedKey)) errors.method = labels.methodUnavailable;
     setPaymentErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -87,7 +97,7 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
       const result = await backendRequest<{ order: { id: string; reference: string }; payment: PaymentSession }>("/orders", {
         method: "POST",
         body: JSON.stringify({
-          items: items.map((item) => ({ productId: item.id.split(":")[0], quantity: item.quantity, size: item.size, color: item.color, customMaterial: item.material })),
+          items: items.map((item) => ({ productId: item.id.split(":")[0], quantity: item.quantity, size: item.size, color: item.color, ...(isCustomMaterial(item.material) ? { customMaterial: item.material } : {}) })),
           deliveryZoneId: zoneId,
           address: { country: deliveryDetails.country, city: deliveryDetails.city, district: deliveryDetails.neighborhood, street: deliveryDetails.address },
           guest: { name: deliveryDetails.fullName, phone: deliveryDetails.phone, email: deliveryDetails.email || undefined },
@@ -119,7 +129,7 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
       <div className="checkout-body"><div className="checkout-grid"><div className="checkout-main">
         {step === 1 && <section className="checkout-step-content"><div className="checkout-guest">{labels.guest}<Link href={`/${locale}/compte/connexion`}>{labels.login}</Link></div><h1>{labels.delivery}</h1><CheckoutField id="fullName" label={labels.fullName} value={deliveryDetails.fullName} placeholder={labels.fullNamePlaceholder} error={deliveryErrors.fullName} onChange={(value) => updateDelivery("fullName", value)} /><div className="checkout-field-row"><CheckoutField id="phone" label={labels.phone} value={deliveryDetails.phone} placeholder={labels.phonePlaceholder} error={deliveryErrors.phone} onChange={(value) => updateDelivery("phone", value)} /><CheckoutField id="email" label={labels.email} value={deliveryDetails.email} placeholder={labels.emailPlaceholder} error={deliveryErrors.email} onChange={(value) => updateDelivery("email", value)} /></div><div className="checkout-field"><label htmlFor="country">{labels.country}</label><select id="country" value={deliveryDetails.country} onChange={(event) => updateDelivery("country", event.target.value)}><option>Cameroun</option><option>Côte d&apos;Ivoire</option><option>France</option><option>Autre</option></select></div><div className="checkout-field-row"><CheckoutField id="city" label={labels.city} value={deliveryDetails.city} placeholder={labels.cityPlaceholder} error={deliveryErrors.city} onChange={(value) => updateDelivery("city", value)} /><CheckoutField id="neighborhood" label={labels.neighborhood} value={deliveryDetails.neighborhood} placeholder={labels.neighborhoodPlaceholder} error={deliveryErrors.neighborhood} onChange={(value) => updateDelivery("neighborhood", value)} /></div><CheckoutField id="address" label={labels.address} value={deliveryDetails.address} placeholder={labels.addressPlaceholder} error={deliveryErrors.address} onChange={(value) => updateDelivery("address", value)} /><div className="checkout-field"><label htmlFor="delivery-zone">Zone de livraison</label><select id="delivery-zone" value={zoneId} onChange={(event) => setZoneId(event.target.value)}>{zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.regionOrCity || zone.country} - {formatPrice(zone.feeFcfa, locale)}</option>)}</select></div><div className="checkout-delivery-card"><strong>🚚 {labels.estimated}</strong><span>{zones.find((zone) => zone.id === zoneId) ? `${zones.find((zone) => zone.id === zoneId)?.etaMinHours}–${zones.find((zone) => zone.id === zoneId)?.etaMaxHours}h` : labels.estimatedDetail}</span></div><button className="checkout-primary" onClick={() => validateDelivery() && goTo(2)} disabled={!zones.length}>{labels.continuePayment}</button></section>}
 
-        {step === 2 && <section className="checkout-step-content"><h1>{labels.payment}</h1><PaymentOption selected={payment === "mm"} onSelect={() => { setPayment("mm"); setPaymentErrors({}); }} title={labels.mobileMoney} note={labels.mobileMoneyNote}><CheckoutField id="mobileNumber" label={labels.mobileNumber} value={mobileNumber} placeholder={labels.phonePlaceholder} error={paymentErrors.mobileNumber} onChange={(value) => { setMobileNumber(value); setPaymentErrors((current) => { const remaining = { ...current }; delete remaining.mobileNumber; return remaining; }); }} /></PaymentOption><PaymentOption selected={payment === "card"} onSelect={() => { setPayment("card"); setPaymentErrors({}); }} title={labels.card} note={labels.cardRedirectNote} /><PaymentOption selected={payment === "cod"} onSelect={() => { setPayment("cod"); setPaymentErrors({}); }} title={labels.cod} note={labels.codNote} /><button className="checkout-primary checkout-button-spaced" onClick={() => validatePayment() && goTo(3)}>{labels.continueSummary}</button><button className="checkout-link-button" onClick={() => goTo(1)}>← {labels.editDelivery}</button></section>}
+        {step === 2 && <section className="checkout-step-content"><h1>{labels.payment}</h1>{allowedMethods.includes("mobile_money") && <PaymentOption selected={payment === "mm"} onSelect={() => { setPayment("mm"); setPaymentErrors({}); }} title={labels.mobileMoney} note={labels.mobileMoneyNote}><CheckoutField id="mobileNumber" label={labels.mobileNumber} value={mobileNumber} placeholder={labels.phonePlaceholder} error={paymentErrors.mobileNumber} onChange={(value) => { setMobileNumber(value); setPaymentErrors((current) => { const remaining = { ...current }; delete remaining.mobileNumber; return remaining; }); }} /></PaymentOption>}{allowedMethods.includes("card") && <PaymentOption selected={payment === "card"} onSelect={() => { setPayment("card"); setPaymentErrors({}); }} title={labels.card} note={labels.cardRedirectNote} />}{codAllowed && <PaymentOption selected={payment === "cod"} onSelect={() => { setPayment("cod"); setPaymentErrors({}); }} title={labels.cod} note={labels.codNote} />}{paymentErrors.method && <p className="checkout-field-error" role="alert">{paymentErrors.method}</p>}<button className="checkout-primary checkout-button-spaced" onClick={() => validatePayment() && goTo(3)}>{labels.continueSummary}</button><button className="checkout-link-button" onClick={() => goTo(1)}>← {labels.editDelivery}</button></section>}
 
         {step === 3 && <section className="checkout-step-content"><h1>{labels.summary}</h1><SummaryBlock title={labels.deliveryAddress} onEdit={() => goTo(1)} edit={labels.edit}>{deliveryDetails.fullName} — {deliveryDetails.neighborhood}, {deliveryDetails.city}, {deliveryDetails.country}</SummaryBlock><SummaryBlock title={labels.paymentMethod} onEdit={() => goTo(2)} edit={labels.edit}>{paymentLabel}</SummaryBlock><SummaryBlock title={`${labels.items} (${items.reduce((sum, item) => sum + item.quantity, 0)})`}>{items.length ? items.map((item) => `${item.name} × ${item.quantity}`).join(", ") : "-"}</SummaryBlock><label className="checkout-check"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />{labels.accept}</label>{submitError && <p className="checkout-field-error">{submitError}</p>}<button className="checkout-primary" disabled={!accepted || submitting} onClick={submitOrder}>{labels.confirm}</button></section>}
 

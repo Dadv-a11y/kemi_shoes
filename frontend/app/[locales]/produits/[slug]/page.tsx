@@ -17,9 +17,9 @@ import { ProductCard } from "@/components/catalog/product-card";
 import { ProductReviews } from "@/components/catalog/product-reviews";
 import { setStaticParamsLocale } from "next-international/server";
 
-export async function generateStaticParams() {
-  return [];
-}
+// Pas de generateStaticParams : la page lit searchParams (?review=1, lien de la
+// notification d'avis), elle doit donc être rendue à la demande. Avec un
+// generateStaticParams, le rendu ISR échouait en production (DYNAMIC_SERVER_USAGE → 500).
 
 export default async function ProductPage({
   params,
@@ -88,6 +88,8 @@ export default async function ProductPage({
             sizeLabel={t("product.size")}
             materialLabel={t("product.material")}
             materialValue={product.material[locale]}
+            materialCustomizable={product.materialCustomizable}
+            colorOptions={product.colorOptions}
             availableSizes={product.availableSizes}
             unavailableSizes={product.unavailableSizes}
             customNote={t("product.customNote")}

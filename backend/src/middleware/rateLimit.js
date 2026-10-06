@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import { isTest } from '../config/env.js';
+import { env, isTest } from '../config/env.js';
 
 // Désactivé en test pour ne pas polluer les suites qui enchaînent des dizaines
 // de requêtes vers /auth en quelques millisecondes.
@@ -11,7 +11,7 @@ const skip = () => isTest;
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: env.AUTH_RATE_LIMIT, // 10 par défaut ; relevable pour un audit automatisé
   standardHeaders: true,
   legacyHeaders: false,
   skip,

@@ -24,7 +24,13 @@ async function hydrateOrder(order) {
   if (!order) return null;
   return {
     ...order,
-    items: await all(`SELECT * FROM OrderItem WHERE orderId = ?`, [order.id]),
+    // Image principale et slugs du produit : les cartes de commande (compte, admin) affichent le produit.
+    items: await all(
+      `SELECT oi.*, p.slugFr, p.slugEn,
+         (SELECT pi.url FROM ProductImage pi WHERE pi.productId = oi.productId ORDER BY pi.isMain DESC, pi.position ASC LIMIT 1) AS imageUrl
+       FROM OrderItem oi LEFT JOIN Product p ON p.id = oi.productId WHERE oi.orderId = ?`,
+      [order.id]
+    ),
     statusHistory: await all(`SELECT * FROM OrderStatusEvent WHERE orderId = ? ORDER BY createdAt ASC`, [order.id]),
   };
 }

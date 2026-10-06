@@ -9,9 +9,10 @@ const upsertSchema = z.object({
   params: z.object({ slug: z.string().min(1) }),
   body: z.object({
     titleFr: z.string().min(1),
-    titleEn: z.string().optional(),
+    // nullish : le back-office renvoie la page telle que lue (titleEn/bodyEn null si non traduits).
+    titleEn: z.string().nullish(),
     bodyFr: z.string().min(1),
-    bodyEn: z.string().optional(),
+    bodyEn: z.string().nullish(),
   }),
 });
 

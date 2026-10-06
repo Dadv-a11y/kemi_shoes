@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { backendRequest, resolveMediaUrl, uploadProductImage } from "@/lib/backend-api";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { backendRequest, hasSession, resolveMediaUrl, uploadProductImage } from "@/lib/backend-api";
+import { TablePagination, usePagination } from "@/components/admin/table-pagination";
 
 type TabId =
   | "overview"
@@ -29,6 +32,8 @@ type Product = {
   description: string;
   descriptionEn: string;
   color: string;
+  /** Couleurs complètes renvoyées par l'API : conservées à l'enregistrement. */
+  colors?: { name: string; hex: string }[];
   images: string[];
   sizes: string[];
   customizableColor: boolean;
@@ -60,7 +65,7 @@ type ApiProduct = {
   colorCustomizable: boolean;
   materialCustomizable: boolean;
   images?: { url: string; isMain?: boolean }[];
-  colors?: { hex: string }[];
+  colors?: { name: string; hex: string }[];
   sizes?: { size: string; available?: boolean }[];
 };
 type ApiOrder = {
@@ -134,7 +139,40 @@ const statusChipLabels: Record<ProductStatus, string> = {
   out: "Rupture",
 };
 
+const STAFF_ROLES = ["ADMIN", "PRODUCT_MANAGER"];
+
+/**
+ * Garde d'accès : le backend protège déjà chaque route, mais sans cette vérification
+ * un visiteur verrait le tableau de bord (avec ses données de démonstration) et une
+ * cascade de 401/403.
+ */
 export function AdminDashboard() {
+  const loginHref = usePathname().startsWith("/en") ? "/en/compte/connexion" : "/fr/compte/connexion";
+  const [access, setAccess] = useState<"checking" | "granted" | "denied">("checking");
+  useEffect(() => {
+    let cancelled = false;
+    (hasSession() ? backendRequest<{ user: { role: string } }>("/auth/me") : Promise.reject(new Error("no session")))
+      .then(({ user }) => { if (!cancelled) setAccess(STAFF_ROLES.includes(user.role) ? "granted" : "denied"); })
+      .catch(() => { if (!cancelled) setAccess("denied"); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (access === "checking") return <main className="grid min-h-screen place-items-center text-sm text-[#8a8378]">Vérification de l’accès…</main>;
+  if (access === "denied") {
+    return (
+      <main className="grid min-h-screen place-items-center p-6 text-center">
+        <div>
+          <h1 className="mb-2 text-xl font-semibold">Accès réservé à l’équipe KEMI SHOES</h1>
+          <p className="mb-4 text-sm text-[#8a8378]">Connectez-vous avec un compte administrateur ou gestionnaire produit.</p>
+          <Link href={loginHref} className="rounded bg-[#14120F] px-4 py-2 text-sm font-semibold text-white">Se connecter</Link>
+        </div>
+      </main>
+    );
+  }
+  return <AdminDashboardContent />;
+}
+
+function AdminDashboardContent() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orderFilter, setOrderFilter] = useState<
@@ -238,6 +276,7 @@ export function AdminDashboard() {
             description: product.descriptionFr,
             descriptionEn: product.descriptionEn,
             color: product.colors?.[0]?.hex ?? "#14120F",
+            colors: product.colors,
             images: product.images?.map((image) => image.url) ?? [],
             sizes: product.sizes?.map((size) => size.size) ?? [],
             customizableColor: product.colorCustomizable,
@@ -292,11 +331,14 @@ export function AdminDashboard() {
             positive: true,
           },
         ]);
+        // Longueur de barre = part des ventes du meilleur produit (trendPercent mesure
+        // l'évolution vs la période précédente : 100 % pour tout produit nouveau).
+        const maxUnits = Math.max(1, ...top.map((item) => item.units));
         setDashboardTopProducts(
-          top.map((item) => ({
+          top.slice(0, 5).map((item) => ({
             name: item.productNameFr,
             sales: item.units,
-            percent: Math.min(100, Math.max(0, item.trendPercent)),
+            percent: Math.round((item.units / maxUnits) * 100),
           })),
         );
         setDashboardAlerts([
@@ -339,6 +381,14 @@ export function AdminDashboard() {
     if (productFilter === "all") return products;
     return products.filter((product) => product.status === productFilter);
   }, [productFilter, products]);
+  // Pagination des tableaux : chaque écran du back-office tient dans le viewport.
+  const ordersPage = usePagination(orderList);
+  const productsPage = usePagination(filteredProducts);
+  const customersPage = usePagination(customers);
+  const zonesPage = usePagination(deliveryZones);
+  const paymentZonesPage = usePagination(deliveryZones);
+  const reviewsPage = usePagination(adminReviews, 5);
+  const staffPage = usePagination(staffUsers, 5);
 
   const updateSelectedProduct = <K extends keyof Product>(
     field: K,
@@ -368,6 +418,7 @@ export function AdminDashboard() {
           description: product.descriptionFr,
           descriptionEn: product.descriptionEn,
           color: product.colors?.[0]?.hex ?? "#14120F",
+          colors: product.colors,
           images: product.images?.map((image) => image.url) ?? [],
           sizes: product.sizes?.map((size) => size.size) ?? [],
           customizableColor: product.colorCustomizable,
@@ -426,10 +477,15 @@ export function AdminDashboard() {
         price,
         ...(compareAtPrice > 0 ? { compareAtPrice } : {}),
         status,
-        colorCustomizable: showToggles.customizableColor,
-        materialCustomizable: showToggles.customizableMaterial,
+        // Boolean() : l'API exigeait des booléens alors qu'elle renvoyait 0/1.
+        colorCustomizable: Boolean(showToggles.customizableColor),
+        materialCustomizable: Boolean(showToggles.customizableMaterial),
         images: selectedProduct.images.map((url, index) => ({ url, isMain: index === 0 })),
-        colors: [{ name: "Couleur", hex: selectedProduct.color }],
+        // Le formulaire n'édite que la couleur principale : les autres couleurs (et leurs noms,
+        // affichés sur la fiche produit) sont conservées au lieu d'être remplacées par « Couleur ».
+        colors: selectedProduct.colors?.length
+          ? selectedProduct.colors.map((color, index) => (index === 0 ? { ...color, hex: selectedProduct.color } : color))
+          : [{ name: "Couleur", hex: selectedProduct.color }],
         sizes: selectedProduct.sizes.map((size) => ({ size, available: sizeAvailability[size] ?? true })),
       };
       if (!payload.nameFr.trim() || !payload.nameEn.trim() || !payload.descriptionFr.trim() || !payload.descriptionEn.trim() || !price) {
@@ -443,7 +499,7 @@ export function AdminDashboard() {
         id: item.id, name: item.nameFr, nameEn: item.nameEn, category: item.category,
         price: `${item.price.toLocaleString("fr-FR")}f`, compareAtPrice: item.compareAtPrice ? String(item.compareAtPrice) : "",
         status: item.status === "out_of_stock" ? "out" : item.status as ProductStatus,
-        description: item.descriptionFr, descriptionEn: item.descriptionEn, color: item.colors?.[0]?.hex ?? "#14120F",
+        description: item.descriptionFr, descriptionEn: item.descriptionEn, color: item.colors?.[0]?.hex ?? "#14120F", colors: item.colors,
         images: item.images?.map((image) => image.url) ?? [], sizes: item.sizes?.map((size) => size.size) ?? [],
         customizableColor: item.colorCustomizable, customizableMaterial: item.materialCustomizable,
       })));
@@ -510,7 +566,16 @@ export function AdminDashboard() {
   const saveContentPage = async () => {
     if (!editingContent) return;
     try {
-      const page = await backendRequest<ContentPage>(`/content/${encodeURIComponent(editingContent.slug)}`, { method: "PUT", body: JSON.stringify(editingContent) });
+      const page = await backendRequest<ContentPage>(`/content/${encodeURIComponent(editingContent.slug)}`, {
+        method: "PUT",
+        // Uniquement les champs attendus par l'API (pas id/slug/updatedAt, ni null).
+        body: JSON.stringify({
+          titleFr: editingContent.titleFr,
+          titleEn: editingContent.titleEn || undefined,
+          bodyFr: editingContent.bodyFr,
+          bodyEn: editingContent.bodyEn || undefined,
+        }),
+      });
       setContentPages((current) => [page, ...current.filter((item) => item.slug !== page.slug)]);
       setEditingContent(null);
       setAdminError("");
@@ -616,7 +681,7 @@ export function AdminDashboard() {
   const renderPage = () => {
     if (activeTab === "overview") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="font-(--font-fraunces) text-[21px]  tracking-[-0.01em]">
@@ -655,7 +720,7 @@ export function AdminDashboard() {
 
           <div className="mb-5 rounded-[10px] border border-[#E4DDD5] bg-white">
             <div className="flex items-center justify-between border-b border-[#E4DDD5] px-[18px] py-[14px]">
-              <h3 className="text-[13.5px] font-semibold">Top 10 produits</h3>
+              <h3 className="text-[13.5px] font-semibold">Top produits</h3>
               <button
                 type="button"
                 onClick={() => setActiveTab("products")}
@@ -664,14 +729,14 @@ export function AdminDashboard() {
                 Voir tout →
               </button>
             </div>
-            <div className="p-[18px]">
+            <div className="px-[18px] py-[12px]">
               {dashboardTopProducts.map((product) => (
                 <div
                   key={product.name}
-                  className="mb-3.5 flex items-center gap-3 last:mb-0"
+                  className="mb-2.5 flex items-center gap-3 last:mb-0"
                 >
-                  <div className="h-8.5 w-8.5 shrink-0 rounded-[6px] bg-linear-to-br from-[#3a2c22] to-[#171310]" />
-                  <div className="w-37.5 shrink-0 text-[12px] font-semibold">
+                  <div className="h-6 w-6 shrink-0 rounded-[5px] bg-linear-to-br from-[#3a2c22] to-[#171310]" />
+                  <div className="w-56 shrink-0 truncate text-[12px] font-semibold" title={product.name}>
                     {product.name}
                   </div>
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#F3ECE6]">
@@ -770,7 +835,7 @@ export function AdminDashboard() {
 
     if (activeTab === "orders") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -835,7 +900,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {orderList.map((order) => {
+                {ordersPage.pageItems.map((order) => {
                   const status = orderStatusClasses[order.status];
                   return (
                     <tr key={order.id} className="border-t border-[#E4DDD5]">
@@ -868,6 +933,7 @@ export function AdminDashboard() {
                 })}
               </tbody>
             </table>
+            <TablePagination pagination={ordersPage} label="commandes" />
           </div>
           {focusedOrder && (
             <div className="mt-4 rounded-[8px] border border-[#E4DDD5] bg-white p-5">
@@ -897,7 +963,7 @@ export function AdminDashboard() {
 
     if (activeTab === "products") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -975,7 +1041,7 @@ export function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product) => (
+                  {productsPage.pageItems.map((product) => (
                     <tr
                       key={product.id}
                       className={`border-t border-[#E4DDD5] ${selectedProductId === product.id ? "bg-[#F3ECE6]" : ""}`}
@@ -1017,6 +1083,7 @@ export function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              <TablePagination pagination={productsPage} label="produits" />
             </div>
           ) : (
             <div className="grid gap-5 lg:grid-cols-[1.8fr_1fr]">
@@ -1348,7 +1415,7 @@ export function AdminDashboard() {
 
     if (activeTab === "customers") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -1382,7 +1449,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {customers.map((customer) => (
+                {customersPage.pageItems.map((customer) => (
                   <tr key={customer.id} className="border-t border-[#E4DDD5]">
                     <td className="px-[14px] py-[12px] font-bold">{customer.name || customer.email || "—"}</td>
                     <td className="px-[14px] py-[12px]">{customer.phone ?? "—"}</td>
@@ -1396,6 +1463,7 @@ export function AdminDashboard() {
                 )}
               </tbody>
             </table>
+            <TablePagination pagination={customersPage} label="clients" />
           </div>
         </div>
       );
@@ -1403,7 +1471,7 @@ export function AdminDashboard() {
 
     if (activeTab === "delivery") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -1504,7 +1572,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {deliveryZones.map((zone) => (
+                {zonesPage.pageItems.map((zone) => (
                   <tr
                     key={zone.id}
                     className="border-t border-[#E4DDD5] align-top"
@@ -1564,6 +1632,7 @@ export function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+            <TablePagination pagination={zonesPage} label="zones" />
             {deliveryZones.length === 0 && (
               <div className="p-8 text-center text-[12px] text-[#8a8378]">
                 Aucune zone de livraison configurée.
@@ -1576,7 +1645,7 @@ export function AdminDashboard() {
 
     if (activeTab === "payment") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -1634,7 +1703,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {deliveryZones.map((zone) => (
+                {paymentZonesPage.pageItems.map((zone) => (
                   <tr key={zone.id} className="border-t border-[#E4DDD5]">
                     <td className="px-[14px] py-[12px]">{zone.regionOrCity || zone.country}{zone.active ? "" : " (inactive)"}</td>
                     <td className="px-[14px] py-[12px]">
@@ -1650,6 +1719,7 @@ export function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+            <TablePagination pagination={paymentZonesPage} label="zones" />
           </div>
         </div>
       );
@@ -1657,7 +1727,7 @@ export function AdminDashboard() {
 
     if (activeTab === "reviews") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -1669,7 +1739,7 @@ export function AdminDashboard() {
 
           <div className="rounded-[10px] border border-[#E4DDD5] bg-white">
             <div className="p-[18px]">
-              {adminReviews.map((review) => (
+              {reviewsPage.pageItems.map((review) => (
                 <div
                   key={review.id}
                   className="flex flex-col gap-3 border-b border-[#E4DDD5] py-[14px] last:border-0 md:flex-row md:items-start md:justify-between"
@@ -1703,6 +1773,7 @@ export function AdminDashboard() {
                   </div>
                 </div>
               ))}
+              <TablePagination pagination={reviewsPage} label="avis" />
               {adminReviews.length === 0 && <p className="py-6 text-center text-sm text-[#8a8378]">Aucun avis en attente.</p>}
               {adminError && <p role="alert" className="text-sm text-red-700">{adminError}</p>}
             </div>
@@ -1713,7 +1784,7 @@ export function AdminDashboard() {
 
     if (activeTab === "content") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -1771,7 +1842,7 @@ export function AdminDashboard() {
 
     if (activeTab === "settings") {
       return (
-        <div className="p-6 lg:p-7">
+        <div className="p-5 lg:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h1 className="font-[var(--font-fraunces)] text-[21px] font-semibold tracking-[-0.01em]">
@@ -1780,7 +1851,7 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <h3 className="mb-3 text-[14px] font-semibold">
               Informations boutique
             </h3>
@@ -1837,7 +1908,7 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-2">
             <h3 className="mb-3 text-[14px] font-semibold">
               Utilisateurs &amp; rôles
             </h3>
@@ -1857,7 +1928,7 @@ export function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {staffUsers.map((user) => (
+                  {staffPage.pageItems.map((user) => (
                     <tr key={user.id} className="border-t border-[#E4DDD5]">
                       <td className="px-[14px] py-[12px]">{user.name || "—"}</td>
                       <td className="px-[14px] py-[12px]">
@@ -1870,6 +1941,7 @@ export function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              <TablePagination pagination={staffPage} label="utilisateurs" />
             </div>
           </div>
 
@@ -1909,7 +1981,8 @@ export function AdminDashboard() {
 
   return (
     <div
-      className="min-h-screen bg-[#FCF7F8] text-[#14120F]"
+      // Ancré au viewport : la page ne défile pas, seule la zone de contenu le peut.
+      className="h-screen overflow-hidden bg-[#FCF7F8] text-[#14120F]"
       style={{ fontFamily: "var(--font-archivo), sans-serif" }}
     >
       {sidebarOpen && (
@@ -1921,7 +1994,7 @@ export function AdminDashboard() {
         />
       )}
 
-      <div className="flex min-h-screen">
+      <div className="flex h-full">
         <aside
           className={`fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col bg-[#000000] text-[#FCF7F8] transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
@@ -1981,7 +2054,7 @@ export function AdminDashboard() {
           </div>
         </aside>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#E4DDD5] bg-white px-4 py-3.5 sm:px-6">
             <div className="flex items-center gap-3">
               <button
@@ -2007,7 +2080,7 @@ export function AdminDashboard() {
             </div>
           </header>
 
-          <main>{renderPage()}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto">{renderPage()}</main>
         </div>
       </div>
     </div>

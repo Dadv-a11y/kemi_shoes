@@ -22,17 +22,14 @@ if (oauthEnabled.google) {
       callbackURL: '/api/v1/auth/oauth/google/callback',
     },
     (accessToken, refreshToken, profile, done) => {
-      try {
-        const tokens = findOrCreateOAuthUser({
-          provider: 'GOOGLE',
-          providerId: profile.id,
-          email: profile.emails?.[0]?.value,
-          name: profile.displayName,
-        });
-        done(null, tokens);
-      } catch (err) {
-        done(err);
-      }
+      // findOrCreateOAuthUser est asynchrone : sans attente, le callback recevait
+      // une Promise et le front des jetons « undefined ».
+      findOrCreateOAuthUser({
+        provider: 'GOOGLE',
+        providerId: profile.id,
+        email: profile.emails?.[0]?.value,
+        name: profile.displayName,
+      }).then((tokens) => done(null, tokens), done);
     }
   ));
 } else {
@@ -48,17 +45,14 @@ if (oauthEnabled.facebook) {
       profileFields: ['id', 'displayName', 'emails'],
     },
     (accessToken, refreshToken, profile, done) => {
-      try {
-        const tokens = findOrCreateOAuthUser({
-          provider: 'FACEBOOK',
-          providerId: profile.id,
-          email: profile.emails?.[0]?.value,
-          name: profile.displayName,
-        });
-        done(null, tokens);
-      } catch (err) {
-        done(err);
-      }
+      // findOrCreateOAuthUser est asynchrone : sans attente, le callback recevait
+      // une Promise et le front des jetons « undefined ».
+      findOrCreateOAuthUser({
+        provider: 'FACEBOOK',
+        providerId: profile.id,
+        email: profile.emails?.[0]?.value,
+        name: profile.displayName,
+      }).then((tokens) => done(null, tokens), done);
     }
   ));
 } else {

@@ -1,5 +1,6 @@
 import { get, all, run } from '../../db/client.js';
 import { notFound, badRequest } from '../../middleware/errorHandler.js';
+import { revokeAllSessions } from '../auth/session.service.js';
 
 export async function listUsers({ role, page = 1, pageSize = 50 } = {}) {
   const where = role ? `WHERE u.role = ?` : '';
@@ -28,5 +29,7 @@ export async function updateUserRole(id, role, actorId) {
   const user = await get(`SELECT id FROM User WHERE id = ?`, [id]);
   if (!user) throw notFound('Utilisateur introuvable.');
   await run(`UPDATE User SET role = ?, updatedAt = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`, [role, id]);
+  // Le rôle est inscrit dans l'access token : on force une reconnexion pour qu'il soit pris en compte.
+  await revokeAllSessions(id);
   return get(`SELECT id, name, email, phone, role, provider, createdAt FROM User WHERE id = ?`, [id]);
 }

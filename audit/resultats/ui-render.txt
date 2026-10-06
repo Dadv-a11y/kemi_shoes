@@ -1,0 +1,59 @@
+✔ fr-accueil                       200  /fr  « Des sandales façonnéesà la main, à Douala. »
+✔ fr-boutique                      200  /fr/boutique  « Toutes les sandales »
+✔ fr-boutique-femme                200  /fr/boutique?categorie=femme  « Toutes les sandales »
+✔ fr-panier-vide                   200  /fr/panier  « Votre panier est vide »
+✔ fr-notre-histoire                200  /fr/notre-histoire  « Faire grandir un savoir-faire. »
+✔ fr-cgv                           200  /fr/cgv  « CGV »
+✔ fr-confidentialite               200  /fr/confidentialite  « Politique de confidentialité »
+✔ fr-mentions-legales              200  /fr/mentions-legales  « Mentions légales »
+✔ fr-connexion                     200  /fr/compte/connexion  «  »
+✔ fr-verification-otp              200  /fr/compte/verification  « Vérification »
+✔ fr-compte-invite                 200  /fr/compte  «  »
+✔ fr-commande-vide                 200  /fr/commande  « Livraison »
+✔ fr-suivi-sans-commande           200  /fr/commande/suivi  « Suivi de commande »
+✔ fr-admin-invite                  200  /fr/admin  « Accès réservé à l’équipe KEMI SHOES »
+✔ fr-404                           404  /fr/page-inexistante  « Page introuvable »
+✔ fr-produit                       200  /fr/produits/sandales-a-bague-d-orteil  « Sandales à bague d’orteil »
+✔ en-accueil                       200  /en  « Des sandales façonnéesà la main, à Douala. »
+✔ en-boutique                      200  /en/boutique  « All sandals »
+✔ en-boutique-femme                200  /en/boutique?categorie=femme  « All sandals »
+✔ en-panier-vide                   200  /en/panier  « Your cart is empty »
+✔ en-notre-histoire                200  /en/notre-histoire  « Growing a craft. »
+✔ en-cgv                           200  /en/cgv  « CGV »
+✔ en-confidentialite               200  /en/confidentialite  « Privacy policy »
+✔ en-mentions-legales              200  /en/mentions-legales  « Legal notice »
+✔ en-connexion                     200  /en/compte/connexion  «  »
+✔ en-verification-otp              200  /en/compte/verification  « Verification »
+✔ en-compte-invite                 200  /en/compte  «  »
+✔ en-commande-vide                 200  /en/commande  « Delivery »
+✔ en-suivi-sans-commande           200  /en/commande/suivi  « Order tracking »
+✔ en-admin-invite                  200  /en/admin  « Accès réservé à l’équipe KEMI SHOES »
+✔ en-404                           404  /en/page-inexistante  « Page introuvable »
+✔ en-produit                       200  /en/produits/toe-ring-sandals  « Toe ring sandals »
+✔ admin-racine-invite              200  /fr/admin  « Accès réservé à l’équipe KEMI SHOES »
+✔ mobile-accueil                   200  /fr  « Des sandales façonnéesà la main, à Douala. »
+✔ mobile-boutique                  200  /fr/boutique  « Toutes les sandales »
+✔ mobile-produit                   200  /fr/produits/sandales-a-bague-d-orteil  « Sandales à bague d’orteil »
+✔ mobile-panier                    200  /fr/panier  « Votre panier est vide »
+✔ parcours-achat                   200  /fr/commande  « Merci pour votre commande ! »
+✔ compte-cliente                   200  /fr/compte  « Bonjour Cliente. »
+✔ admin-0-vue-d-ensemble           200  /fr/admin  « Vue d'ensemble »
+✔ admin-1-commandes                200  /fr/admin  « Commandes »
+✔ admin-2-produits                 200  /fr/admin  « Produits »
+✔ admin-3-clients                  200  /fr/admin  « Clients »
+✔ admin-4-livraison                200  /fr/admin  « Zones de livraison »
+✔ admin-5-paiement                 200  /fr/admin  « Paiement »
+✔ admin-6-avis-clients             200  /fr/admin  « Avis clients »
+✔ admin-7-contenu-traductions      200  /fr/admin  « Contenu & traductions »
+✔ admin-8-paramètres               200  /fr/admin  « Paramètres »
+✔ admin-edition-produit            200  /fr/admin  « Produits »
+✔ admin-refuse-cliente             200  /fr/admin  « Accès réservé à l’équipe KEMI SHOES »
+✔ produit-suggestions              200  /fr/produits/sandales-a-bague-d-orteil  « Sandales à bague d’orteil »
+✔ otp-1-compte-a-rebours           200  /fr/compte/verification  « Vérification »
+✔ otp-ignorer-bandeau              200  /fr/boutique  « Toutes les sandales »
+✔ connexion-email                  200  /fr/compte  « Bonjour Cliente. »
+✔ connexion-sans-sms               200  /fr/compte/connexion  «  »
+✔ deconnexion                      200  /fr/compte/connexion  «  »
+
+Commande passée depuis l'UI : Commande KS-10026
+56/56 vues sans erreur

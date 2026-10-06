@@ -1,0 +1,7 @@
+# Données et sorties de test locales : ne jamais les envoyer sur le dépôt.
+# Images de test du seed (régénérables : python3 backend/scripts/generate-demo-images.py)
+backend/images_demo/
+# Captures produites par audit/ui-render-check.mjs
+audit/screenshots/
+audit/captures/
+audit/ui-report.json

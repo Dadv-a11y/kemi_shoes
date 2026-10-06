@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createOtpChallenge } from "@/lib/auth";
-import { backendApiUrl, backendRequest, saveSession } from "@/lib/backend-api";
+import { backendApiUrl, backendRequest, onSignedIn } from "@/lib/backend-api";
 
 type Labels = Record<string, string>;
+/** Méthodes de connexion réellement configurées côté backend (GET /auth/providers). */
+type Providers = { password: boolean; phone: boolean; google: boolean; facebook: boolean };
+const NO_PROVIDERS: Providers = { password: true, phone: false, google: false, facebook: false };
 
 export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labels }) {
   const router = useRouter();
@@ -18,16 +21,16 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [countryCode, setCountryCode] = useState("+237");
-  const [providers, setProviders] = useState({ google: false, facebook: false });
+  const [providers, setProviders] = useState<Providers | null>(null);
 
   useEffect(() => {
-    backendRequest<{ google: boolean; facebook: boolean }>("/auth/providers").then(setProviders).catch(() => undefined);
-    // Retour du callback OAuth backend : tokens transmis dans le fragment d'URL.
+    backendRequest<Providers>("/auth/providers")
+      .then((available) => setProviders({ ...NO_PROVIDERS, ...available }))
+      .catch(() => setProviders(NO_PROVIDERS));
+    // Échec du callback OAuth (en cas de succès, le backend pose les cookies et redirige vers le compte).
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const accessToken = fragment.get("accessToken");
-    const refreshToken = fragment.get("refreshToken");
-    if (accessToken && refreshToken) {
-      saveSession(accessToken, refreshToken);
+    if (fragment.get("signedIn")) {
+      onSignedIn();
       window.history.replaceState(null, "", window.location.pathname);
       router.replace(`/${locale}/compte`);
     } else if (fragment.get("error")) {
@@ -48,9 +51,22 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
     setError("");
     try {
       const e164 = fullPhone();
-      await backendRequest("/auth/otp/request", { method: "POST", body: JSON.stringify({ phone: e164 }) });
-      createOtpChallenge(e164, mode, name.trim() || undefined);
+      const { expiresAt } = await backendRequest<{ expiresAt: string }>("/auth/otp/request", { method: "POST", body: JSON.stringify({ phone: e164 }) });
+      createOtpChallenge(e164, mode, name.trim() || undefined, expiresAt);
       router.push(`/${locale}/compte/verification`);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : labels.required);
+    }
+  };
+
+  // Les jetons arrivent en cookies HttpOnly : la réponse ne contient que l'utilisateur.
+  const signInWithPassword = async () => {
+    if (mode === "signup" && !name.trim()) return setError(labels.required);
+    setError("");
+    try {
+      await backendRequest(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", body: JSON.stringify(mode === "login" ? { email, password } : { name: name.trim(), email, password }) });
+      onSignedIn();
+      router.push(`/${locale}/compte`);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : labels.required);
     }
@@ -59,14 +75,17 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
   return <main className="auth-page"><div className="auth-wrap"><div className="auth-card">
     <div className="auth-tabs"><button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>{labels.login}</button><button className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setError(""); }}>{labels.signup}</button></div>
     <p className="auth-intro">{labels.intro}</p>
+    {!providers ? <p className="auth-intro">…</p> : <>
     {providers.google && <a className="auth-oauth" href={`${backendApiUrl}/auth/oauth/google`}><span>G</span>{labels.google}</a>}{providers.facebook && <a className="auth-oauth" href={`${backendApiUrl}/auth/oauth/facebook`}><span>f</span>{labels.facebook}</a>}
     {(providers.google || providers.facebook) && <div className="auth-divider"><i />{labels.or}<i /></div>}
-    {!emailOpen ? <>
+    {/* Téléphone + OTP seulement si un fournisseur SMS/WhatsApp est branché côté backend. */}
+    {providers.phone && !emailOpen ? <>
       {mode === "signup" && <AuthField label={labels.name} value={name} placeholder={labels.namePlaceholder} onChange={setName} />}
-      <div className="auth-field"><label>{labels.phone}</label><div className="auth-phone"><select aria-label={labels.countryCode} value={countryCode} onChange={(event) => setCountryCode(event.target.value)}><option>+237</option><option>+225</option><option>+33</option></select><input value={phone} placeholder={labels.phonePlaceholder} onChange={(event) => setPhone(event.target.value)} /></div>{error && <span className="auth-error">{error}</span>}</div>
+      <div className="auth-field"><label>{labels.phone}</label><div className="auth-phone"><select aria-label={labels.countryCode} value={countryCode} onChange={(event) => setCountryCode(event.target.value)}><option>+237</option><option>+225</option><option>+33</option></select><input type="tel" value={phone} placeholder={labels.phonePlaceholder} onChange={(event) => setPhone(event.target.value)} /></div>{error && <span className="auth-error">{error}</span>}</div>
       <button className="auth-primary" onClick={requestCode}>{labels.receiveCode}</button>
       <button className="auth-email-toggle" onClick={() => setEmailOpen(true)}>{labels.emailToggle}</button>
-    </> : <div className="auth-email-fields"><AuthField label={labels.email} value={email} placeholder={labels.emailPlaceholder} onChange={setEmail} /><AuthField label={labels.password} value={password} placeholder={labels.passwordPlaceholder} onChange={setPassword} type="password" /><button className="auth-primary" onClick={async () => { try { const result = await backendRequest<{ accessToken: string; refreshToken: string }>(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", body: JSON.stringify(mode === "login" ? { email, password } : { name, email, password }) }); saveSession(result.accessToken, result.refreshToken); router.push(`/${locale}/compte`); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : labels.required); } }}>{labels.continue}</button><button className="auth-email-toggle" onClick={() => setEmailOpen(false)}>{labels.phone}</button>{error && <span className="auth-error">{error}</span>}</div>}
+    </> : <div className="auth-email-fields">{mode === "signup" && <AuthField label={labels.name} value={name} placeholder={labels.namePlaceholder} onChange={setName} />}<AuthField label={labels.email} value={email} placeholder={labels.emailPlaceholder} onChange={setEmail} /><AuthField label={labels.password} value={password} placeholder={labels.passwordPlaceholder} onChange={setPassword} type="password" /><button className="auth-primary" onClick={signInWithPassword}>{labels.continue}</button>{providers.phone && <button className="auth-email-toggle" onClick={() => setEmailOpen(false)}>{labels.phone}</button>}{error && <span className="auth-error">{error}</span>}</div>}
+    </>}
     <p className="auth-fineprint">{labels.fineprint} <Link href={`/${locale}/cgv`}>{labels.terms}</Link> {labels.and} <Link href={`/${locale}/confidentialite`}>{labels.privacy}</Link>.</p>
     <div className="auth-guest">{labels.guest} <Link href={`/${locale}/boutique`}>{labels.continueGuest}</Link></div>
   </div></div></main>;
