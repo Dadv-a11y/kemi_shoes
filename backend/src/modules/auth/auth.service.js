@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { get, run, all } from '../../db/client.js';
 import { hashSecret, verifySecret } from '../../config/password.js';
-import { createSession, rotateSession, revokeSession, revokeAllSessions } from './session.service.js';
+import { createSession, rotateSession, revokeSession, revokeAllSessions, sessionIdFromTokens } from './session.service.js';
 import { unauthorized, conflict } from '../../middleware/errorHandler.js';
 import { requestOtp as sendOtp, verifyOtp as checkOtp } from './otp.service.js';
 import { mailer } from '../notifications/mailer.js';
@@ -131,8 +131,9 @@ export async function refreshSession(refreshToken) {
   return { ...tokens, user: toPublicUser(user) };
 }
 
-export async function logout(sessionId) {
-  await revokeSession(sessionId);
+export async function logout(tokens) {
+  const sessionId = sessionIdFromTokens(tokens);
+  if (sessionId) await revokeSession(sessionId);
 }
 
 export async function logoutEverywhere(userId) {

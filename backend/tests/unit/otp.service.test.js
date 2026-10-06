@@ -2,6 +2,8 @@ import { setupTestDb } from '../testDb.js';
 import { run } from '../../src/db/client.js';
 import { requestOtp, verifyOtp } from '../../src/modules/auth/otp.service.js';
 import { smsSender } from '../../src/modules/notifications/sms.js';
+import { getSmsProvider, getWhatsappProvider } from '../../src/modules/notifications/sms/sms.factory.js';
+import { get } from '../../src/db/client.js';
 
 setupTestDb();
 
@@ -61,5 +63,30 @@ describe('otp.service', () => {
     expect(smsSender._sentMessages).toHaveLength(2);
     const [, code] = smsSender._sentMessages[1].message.match(/(\d{6})/);
     await expect(verifyOtp('+237600000007', code)).resolves.toBe(true);
+  });
+
+  test('repli WhatsApp si le fournisseur SMS échoue', async () => {
+    const sms = getSmsProvider();
+    const original = sms.send;
+    sms.send = async () => { throw new Error('sms_down'); };
+    try {
+      await requestOtp('+237600000008');
+    } finally {
+      sms.send = original;
+    }
+    expect(getWhatsappProvider().sent).toHaveLength(1);
+    expect(getWhatsappProvider().sent[0]).toMatchObject({ phone: '+237600000008', channel: 'whatsapp' });
+  });
+
+  test('aucun canal ne délivre le code : 502 et le code est supprimé (nouvelle demande possible)', async () => {
+    const providers = [getSmsProvider(), getWhatsappProvider()];
+    const originals = providers.map((provider) => provider.send);
+    providers.forEach((provider) => { provider.send = async () => { throw new Error('down'); }; });
+    try {
+      await expect(requestOtp('+237600000009')).rejects.toMatchObject({ statusCode: 502, code: 'OTP_DELIVERY_FAILED' });
+    } finally {
+      providers.forEach((provider, index) => { provider.send = originals[index]; });
+    }
+    expect(await get(`SELECT id FROM OtpCode WHERE phone = ?`, ['+237600000009'])).toBeUndefined();
   });
 });

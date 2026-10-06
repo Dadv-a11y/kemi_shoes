@@ -15,16 +15,21 @@ const API = process.argv[3] ?? 'http://localhost:4000/api/v1';
 const SHOTS = process.argv[4] ?? 'audit/screenshots';
 fs.mkdirSync(SHOTS, { recursive: true });
 
-const json = async (method, url, body, token) => {
-  const res = await fetch(`${API}${url}`, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined });
+const json = async (method, url, body, cookie) => {
+  const res = await fetch(`${API}${url}`, { method, headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: body ? JSON.stringify(body) : undefined });
   return res.status === 204 ? null : res.json();
 };
-const admin = await json('POST', '/auth/login', { email: 'admin@test.local', password: 'Admin12345' });
-const client = await json('POST', '/auth/login', { email: 'client@test.local', password: 'Client12345' });
-for (const session of [admin, client]) if (!session.accessToken) throw new Error(`Connexion impossible : ${JSON.stringify(session)} (rate-limit ? redémarrer le backend)`);
+// Connexion : la session arrive en cookies HttpOnly (Set-Cookie), jamais dans le corps.
+async function login(email, password) {
+  const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  if (!res.ok) throw new Error(`Connexion impossible pour ${email} : HTTP ${res.status} (rate-limit ? lancer le backend avec AUTH_RATE_LIMIT=500)`);
+  return res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+}
+const admin = await login('admin@test.local', 'Admin12345');
+const client = await login('client@test.local', 'Client12345');
 // Une zone active est nécessaire au checkout (le seed n'en crée pas).
 const zones = await json('GET', '/delivery-zones?activeOnly=true');
-if (!zones.length) await json('POST', '/delivery-zones', { country: 'Cameroun', regionOrCity: 'Douala', feeFcfa: 1500, etaMinHours: 24, etaMaxHours: 48, codAvailable: true, paymentMethods: ['mobile_money', 'card', 'cod'] }, admin.accessToken);
+if (!zones.length) await json('POST', '/delivery-zones', { country: 'Cameroun', regionOrCity: 'Douala', feeFcfa: 1500, etaMinHours: 24, etaMaxHours: 48, codAvailable: true, paymentMethods: ['mobile_money', 'card', 'cod'] }, admin);
 const { items: products } = await json('GET', '/products?status=active&pageSize=100');
 const product = products.find((p) => p.sizes.some((s) => s.available));
 
@@ -40,7 +45,14 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 
 async function audit(name, url, { session, viewport = { width: 1366, height: 900 }, action, shot = true, shotName } = {}) {
   const context = await browser.newContext({ viewport, locale: 'fr-FR' });
-  if (session) await context.addInitScript(([a, r]) => { localStorage.setItem('kemi-access-token', a); localStorage.setItem('kemi-refresh-token', r); }, [session.accessToken, session.refreshToken]);
+  if (session) {
+    // Cookies HttpOnly de l'API (localhost : partagés entre les ports 3000 et 4000) + indicateur « connecté » du front.
+    await context.addCookies(session.split('; ').map((pair) => {
+      const [name, ...value] = pair.split('=');
+      return { name, value: value.join('='), domain: 'localhost', path: name === 'kemi_rt' ? '/api/v1/auth' : '/', httpOnly: true, sameSite: 'Lax' };
+    }));
+    await context.addInitScript(() => localStorage.setItem('kemi-has-session', '1'));
+  }
   // CDN externes (Font Awesome) : inaccessibles en environnement isolé, on les neutralise
   // pour ne pas fausser la mesure (dépendance signalée dans l'audit).
   await context.route(/cdnjs\.cloudflare\.com/, (route) => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
@@ -228,8 +240,37 @@ await audit('otp-1-compte-a-rebours', '/fr/compte/connexion', {
   },
 });
 
+// Connexion réelle par e-mail depuis le formulaire : les cookies HttpOnly suffisent à ouvrir l'espace compte.
+await audit('connexion-email', '/fr/compte/connexion', {
+  shotName: 'connexion-email-compte',
+  action: async (page, issues) => {
+    await page.getByRole('button', { name: 'Utiliser un email et un mot de passe à la place' }).click();
+    await page.fill('input[placeholder="nom@exemple.com"]', 'client@test.local');
+    await page.fill('input[type="password"]', 'Client12345');
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.waitForURL(/\/compte$/, { timeout: 10000 });
+    await page.waitForTimeout(1500);
+    const cookies = await page.context().cookies();
+    const at = cookies.find((cookie) => cookie.name === 'kemi_at');
+    if (!at?.httpOnly) issues.push(`cookie kemi_at absent ou non HttpOnly : ${JSON.stringify(at)}`);
+    if (!/Bonjour/.test((await page.locator('h1').first().textContent()) ?? '')) issues.push('espace compte non ouvert après connexion');
+  },
+});
+
+// Sans fournisseur SMS côté backend (phone: false), la connexion par téléphone est masquée.
+await audit('connexion-sans-sms', '/fr/compte/connexion', {
+  action: async (page, issues) => {
+    await page.route('**/auth/providers', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ password: true, phone: false, google: false, facebook: false }) }));
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(1200);
+    if (await page.locator('input[type="tel"]').count()) issues.push('champ téléphone affiché sans fournisseur SMS');
+    if (!(await page.locator('input[type="password"]').count())) issues.push('formulaire e-mail non affiché par défaut');
+    if (await page.getByText('Continuer avec Google').count()) issues.push('bouton Google affiché alors que non configuré');
+  },
+});
+
 // Déconnexion : le jeton de la session est révoqué côté serveur.
-const leaving = await json('POST', '/auth/login', { email: 'client@test.local', password: 'Client12345' });
+const leaving = await login('client@test.local', 'Client12345');
 await audit('deconnexion', '/fr/compte', {
   session: leaving,
   shot: false,
@@ -237,7 +278,10 @@ await audit('deconnexion', '/fr/compte', {
     await page.getByRole('tab', { name: /informations/i }).click();
     await page.getByRole('button', { name: 'Se déconnecter', exact: true }).click();
     await page.waitForURL(/connexion/, { timeout: 10000 });
-    const me = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${leaving.accessToken}` } });
+    const me = await fetch(`${API}/auth/me`, { headers: { Cookie: leaving } });
+    // Les jetons ne doivent jamais être lisibles par le JavaScript de la page.
+    const exposed = await page.evaluate(() => document.cookie.includes('kemi_at') || Object.keys(localStorage).some((key) => /token/i.test(key)));
+    if (exposed) issues.push('jeton accessible depuis le JavaScript de la page');
     if (me.status !== 401) issues.push(`jeton toujours accepté après déconnexion (HTTP ${me.status})`);
   },
 });

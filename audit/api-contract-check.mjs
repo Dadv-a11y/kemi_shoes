@@ -9,9 +9,12 @@ const API = process.argv[2] ?? process.env.API_URL ?? 'http://localhost:4000/api
 const results = [];
 const hit = new Set();
 
-async function call(method, path, { token, body, expect, label, form } = {}) {
+// Les sessions sont des cookies HttpOnly : `token` est l'en-tête Cookie d'un
+// navigateur connecté (kemi_at=…; kemi_rt=…), extrait des Set-Cookie de la connexion.
+async function call(method, path, { token, body, expect, label, form, origin } = {}) {
   const headers = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token) headers.Cookie = token;
+  if (origin) headers.Origin = origin;
   let payload;
   if (form) payload = form;
   else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
@@ -21,19 +24,25 @@ async function call(method, path, { token, body, expect, label, form } = {}) {
   const expected = [].concat(expect ?? [200]);
   const ok = expected.includes(response.status);
   results.push({ ok, method, path, status: response.status, expected: expected.join('|'), label: label ?? '', detail: ok ? '' : JSON.stringify(data)?.slice(0, 200) });
-  return { status: response.status, data };
+  const setCookies = response.headers.getSetCookie?.() ?? [];
+  return { status: response.status, data, setCookies, cookie: setCookies.map((c) => c.split(';')[0]).filter((c) => !c.endsWith('=')).join('; ') };
 }
 const route = (key) => hit.add(key);
 
-const login = async (email, password) => (await call('POST', '/auth/login', { body: { email, password }, label: 'login' })).data;
+const login = async (email, password, label = 'login') => (await call('POST', '/auth/login', { body: { email, password }, label })).cookie;
 
-const admin = await login('admin@test.local', 'Admin12345'); route('POST /auth/login');
-const client = await login('client@test.local', 'Client12345');
-const A = admin.accessToken; const C = client.accessToken;
+const A = await login('admin@test.local', 'Admin12345'); route('POST /auth/login');
+const C = await login('client@test.local', 'Client12345');
+const adminId = (await call('GET', '/auth/me', { token: A, label: 'admin' })).data.user.id;
 
 // --- auth ---
 const email = `e2e-${Date.now()}@test.local`;
 const reg = await call('POST', '/auth/register', { body: { name: 'E2E', email, password: 'E2e123456' }, expect: 201 }); route('POST /auth/register');
+// Jetons uniquement en cookies HttpOnly, jamais dans le corps de la réponse.
+const atCookie = reg.setCookies.find((c) => c.startsWith('kemi_at=')) ?? '';
+const rtCookie = reg.setCookies.find((c) => c.startsWith('kemi_rt=')) ?? '';
+results.push({ ok: /HttpOnly/i.test(atCookie) && /HttpOnly/i.test(rtCookie) && /Path=\/api\/v1\/auth/i.test(rtCookie) && !reg.data?.accessToken && !reg.data?.refreshToken,
+  method: 'POST', path: '/auth/register', status: reg.status, expected: 'cookies HttpOnly, corps sans jeton', label: 'jetons en cookies', detail: JSON.stringify({ atCookie: atCookie.replace(/=[^;]+/, '=…'), rtCookie: rtCookie.replace(/=[^;]+/, '=…'), body: Object.keys(reg.data ?? {}) }) });
 await call('POST', '/auth/register', { body: { name: 'E2E', email, password: 'E2e123456' }, expect: 409, label: 'email déjà utilisé' });
 await call('POST', '/auth/login', { body: { email, password: 'mauvais' }, expect: 401, label: 'mauvais mot de passe' });
 const otpPhone = `+2376${String(Date.now()).slice(-8)}`;
@@ -41,27 +50,33 @@ const otp1 = await call('POST', '/auth/otp/request', { body: { phone: otpPhone }
 const otp2 = await call('POST', '/auth/otp/request', { body: { phone: otpPhone }, label: 'code encore valable : pas de nouvel envoi' });
 results.push({ ok: otp1.data?.resent === true && otp2.data?.resent === false && otp2.data?.expiresAt === otp1.data?.expiresAt, method: 'POST', path: '/auth/otp/request', status: otp2.status, expected: 'resent=false, même échéance', label: 'renvoi seulement après expiration', detail: JSON.stringify(otp2.data) });
 await call('POST', '/auth/otp/verify', { body: { phone: '+237690000001', code: '000000' }, expect: [400, 401], label: 'code OTP faux' }); route('POST /auth/otp/verify');
-const refreshed = await call('POST', '/auth/refresh', { body: { refreshToken: reg.data.refreshToken } }); route('POST /auth/refresh');
+const refreshed = await call('POST', '/auth/refresh', { token: reg.cookie }); route('POST /auth/refresh');
 // Refresh tokens rotatifs : l'ancien est refusé (délai de grâce multi-onglets → REFRESH_SUPERSEDED).
-const reused = await call('POST', '/auth/refresh', { body: { refreshToken: reg.data.refreshToken }, expect: 401, label: 'ancien refresh token refusé (rotation)' });
+const reused = await call('POST', '/auth/refresh', { token: reg.cookie, expect: 401, label: 'ancien refresh token refusé (rotation)' });
 results.push({ ok: reused.data?.error?.code === 'REFRESH_SUPERSEDED', method: 'POST', path: '/auth/refresh', status: reused.status, expected: 'REFRESH_SUPERSEDED', label: 'rejeu immédiat reconnu (autre onglet)', detail: JSON.stringify(reused.data) });
-let E = refreshed.data.accessToken;
+let E = refreshed.cookie;
 
-// Déconnexion : la session est révoquée côté serveur, access ET refresh token deviennent invalides.
-const temp = (await call('POST', '/auth/login', { body: { email, password: 'E2e123456' }, label: 'seconde session' })).data;
-await call('POST', '/auth/logout', { token: temp.accessToken, expect: 204 }); route('POST /auth/logout');
-await call('GET', '/auth/me', { token: temp.accessToken, expect: 401, label: 'access token après déconnexion' });
-await call('POST', '/auth/refresh', { body: { refreshToken: temp.refreshToken }, expect: 401, label: 'refresh token après déconnexion' });
+// CSRF : une requête avec cookie de session venant d'une origine non autorisée est refusée.
+await call('PATCH', '/auth/me', { token: E, body: { name: 'E2E' }, origin: 'https://evil.example', expect: 403, label: 'CSRF : origine non autorisée' });
+await call('PATCH', '/auth/me', { token: E, body: { name: 'E2E' }, origin: 'http://localhost:3000', label: 'origine du frontend autorisée' });
+
+// Déconnexion : la session est révoquée côté serveur et les cookies effacés.
+const temp = await login(email, 'E2e123456', 'seconde session');
+const out = await call('POST', '/auth/logout', { token: temp, expect: 204 }); route('POST /auth/logout');
+results.push({ ok: out.setCookies.some((c) => c.startsWith('kemi_at=;')), method: 'POST', path: '/auth/logout', status: out.status, expected: 'cookies effacés', label: 'Set-Cookie d’effacement', detail: JSON.stringify(out.setCookies) });
+await call('GET', '/auth/me', { token: temp, expect: 401, label: 'access token après déconnexion' });
+await call('POST', '/auth/refresh', { token: temp, expect: 401, label: 'refresh token après déconnexion' });
 await call('GET', '/auth/me', { token: E, label: 'les autres sessions restent actives' });
-const t1 = (await call('POST', '/auth/login', { body: { email, password: 'E2e123456' }, label: 'appareil 1' })).data;
-const t2 = (await call('POST', '/auth/login', { body: { email, password: 'E2e123456' }, label: 'appareil 2' })).data;
-await call('POST', '/auth/logout-all', { token: t1.accessToken, expect: 204 }); route('POST /auth/logout-all');
-await call('GET', '/auth/me', { token: t2.accessToken, expect: 401, label: 'déconnecté de tous les appareils' });
-E = (await call('POST', '/auth/login', { body: { email, password: 'E2e123456' }, label: 'reconnexion' })).data.accessToken;
+const t1 = await login(email, 'E2e123456', 'appareil 1');
+const t2 = await login(email, 'E2e123456', 'appareil 2');
+await call('POST', '/auth/logout-all', { token: t1, expect: 204 }); route('POST /auth/logout-all');
+await call('GET', '/auth/me', { token: t2, expect: 401, label: 'déconnecté de tous les appareils' });
+E = await login(email, 'E2e123456', 'reconnexion');
 await call('GET', '/auth/me', { token: C }); route('GET /auth/me');
 await call('GET', '/auth/me', { expect: 401, label: 'sans token' });
 await call('PATCH', '/auth/me', { token: C, body: { name: 'Cliente Test' } }); route('PATCH /auth/me');
-await call('GET', '/auth/providers'); route('GET /auth/providers');
+const providers = await call('GET', '/auth/providers'); route('GET /auth/providers');
+results.push({ ok: providers.data?.password === true && typeof providers.data?.phone === 'boolean', method: 'GET', path: '/auth/providers', status: providers.status, expected: 'password + phone (selon fournisseur SMS)', label: 'méthodes de connexion exposées', detail: JSON.stringify(providers.data) });
 await call('GET', '/auth/oauth/google', { expect: [302, 404], label: 'OAuth (404 si non configuré)' }); route('GET /auth/oauth/google'); route('GET /auth/oauth/google/callback');
 await call('GET', '/auth/oauth/facebook', { expect: [302, 404], label: 'OAuth (404 si non configuré)' }); route('GET /auth/oauth/facebook'); route('GET /auth/oauth/facebook/callback');
 await call('GET', '/auth/oauth/failure', { expect: 401 }); route('GET /auth/oauth/failure');
@@ -179,9 +194,9 @@ await call('GET', '/users?role=CUSTOMER&pageSize=100', { token: A }); route('GET
 const target = (await call('GET', '/users?role=CUSTOMER&pageSize=100', { token: A })).data.items.find((u) => u.email === email);
 await call('PATCH', `/users/${target.id}/role`, { token: A, body: { role: 'PRODUCT_MANAGER' } }); route('PATCH /users/:id/role');
 await call('GET', '/auth/me', { token: E, expect: 401, label: 'changement de rôle : sessions révoquées' });
-E = (await call('POST', '/auth/login', { body: { email, password: 'E2e123456' }, label: 'reconnexion avec le nouveau rôle' })).data.accessToken;
+E = await login(email, 'E2e123456', 'reconnexion avec le nouveau rôle');
 await call('GET', '/products?pageSize=1', { token: E, label: 'nouveau rôle actif' });
-await call('PATCH', `/users/${admin.user?.id ?? target.id}/role`, { token: A, body: { role: 'CUSTOMER' }, expect: [400, 403], label: 'admin ne peut pas se rétrograder' });
+await call('PATCH', `/users/${adminId}/role`, { token: A, body: { role: 'CUSTOMER' }, expect: [400, 403], label: 'admin ne peut pas se rétrograder' });
 const now = new Date(); const from = new Date(now.getTime() - 30 * 864e5);
 const period = `?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(now.toISOString())}`;
 await call('GET', `/dashboard/kpis${period}`, { token: A }); route('GET /dashboard/kpis');
@@ -202,7 +217,7 @@ await call('DELETE', '/auth/me', { token: E, expect: 204 }); route('DELETE /auth
 // --- santé / métriques (réservées aux administrateurs) ---
 for (const [label, token, expected] of [['/health public', undefined, 200], ['/metrics sans token', undefined, 401], ['/metrics client', C, 403], ['/metrics admin', A, 200]]) {
   const path = label.split(' ')[0];
-  const res = await fetch(new URL(path, API).toString(), { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const res = await fetch(new URL(path, API).toString(), { headers: token ? { Cookie: token } : {} });
   results.push({ ok: res.status === expected, method: 'GET', path, status: res.status, expected: String(expected), label, detail: '' });
 }
 

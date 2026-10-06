@@ -24,7 +24,7 @@ import usersRoutes from "./modules/users/users.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
 import mediaRoutes from "./modules/media/media.routes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
-import { requireAuth, requireRole } from "./middleware/auth.js";
+import { requireAuth, requireRole, requireTrustedOrigin } from "./middleware/auth.js";
 
 const app = express();
 const allowedOrigins = env.CORS_ORIGINS.split(",")
@@ -39,6 +39,7 @@ app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(requireTrustedOrigin(allowedOrigins));
 app.use(pinoHttp({ logger }));
 app.use(metricsMiddleware);
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));

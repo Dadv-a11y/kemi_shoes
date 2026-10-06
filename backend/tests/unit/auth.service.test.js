@@ -150,7 +150,7 @@ describe('refreshSession', () => {
 
   test('déconnexion : la session révoquée ne peut plus être renouvelée', async () => {
     const { refreshToken, accessToken } = await registerWithPassword({ name: 'R', email: 'out@example.com', password: 'Password123!' });
-    await logout(verifyAccessToken(accessToken).sid);
+    await logout({ accessToken });
     await expect(refreshSession(refreshToken)).rejects.toMatchObject({ statusCode: 401 });
   });
 

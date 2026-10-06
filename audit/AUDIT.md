@@ -23,9 +23,9 @@ Résultats bruts : `audit/resultats/`. Le script de rendu écrit une capture de 
 
 | Étape | Avant correctifs | Après |
 |---|---|---|
-| Tests backend | 47/93 (mot de passe de la base de test codé en dur) | **108/108** |
-| Contrat API | 77/83 | **112/112** (62 routes) |
-| Rendu des vues | 22/49, aucune commande possible | **53/53**, commande passée depuis l'UI |
+| Tests backend | 47/93 (mot de passe de la base de test codé en dur) | **115/115** |
+| Contrat API | 77/83 | **118/118** (62 routes) |
+| Rendu des vues | 22/49, aucune commande possible | **55/55**, commande passée depuis l'UI |
 | `npm audit --omit=dev` (frontend) | 1 critique, plusieurs élevées | **0** |
 | Lint frontend | 1 erreur | 0 erreur (1 avertissement) |
 
@@ -112,18 +112,28 @@ Tests ajoutés : `errorHandler.test.js`, suppression de zone référencée, alle
 | 29 | OAuth Google/Facebook inopérant | `findOrCreateOAuthUser` (asynchrone) n'était pas attendu : le front recevait des jetons `undefined` |
 | 30 | Notifications lues qui réapparaissaient | Colonne `readAt` non remappée par la couche SQL (`readat`) |
 
+### Troisième lot
+
+| # | Demande / constat | Mise en œuvre |
+|---|---|---|
+| 31 | **Jetons en cookies** | L'API pose les jetons en cookies `HttpOnly` (`kemi_at` pour toute l'API, `kemi_rt` limité à `/api/v1/auth`), `SameSite=Lax`, `Secure` en production, durée = celle du jeton. Les réponses de connexion ne contiennent plus que l'utilisateur ; le callback OAuth ne passe plus aucun jeton dans l'URL. Le front appelle l'API avec `credentials: "include"` et ne garde qu'un indicateur « connecté » sans secret. Protection CSRF : toute requête modifiant des données avec un cookie de session doit venir d'une origine de `CORS_ORIGINS`. L'en-tête `Authorization: Bearer` reste accepté pour les scripts et la supervision |
+| 32 | **SMS derrière une interface** | `modules/notifications/sms/` : contrat `SmsProvider` (`send(phone, message)`), fournisseurs `console` (dev : code affiché dans la console), `memory` (tests), registre `sms.factory.js` et `README.md` expliquant comment brancher un vrai fournisseur (exemple Twilio). Choix par `SMS_PROVIDER` / `WHATSAPP_PROVIDER` : `console` en dev, `none` en production, `console`/`memory` refusés au démarrage en production. Repli WhatsApp ; si aucun canal ne délivre le code, il est supprimé et l'API répond 502 |
+| 33 | **Méthodes de connexion masquées si non configurées** | `GET /auth/providers` renvoie `{ password, phone, google, facebook }` ; `phone` dépend du fournisseur SMS. Le front n'affiche que les méthodes disponibles (formulaire e-mail par défaut sans SMS) ; `POST /auth/otp/request` répond 503 sans fournisseur |
+| 34 | Inscription par e-mail impossible | Le formulaire e-mail n'avait pas de champ « Nom » en mode inscription (refus 400 de l'API) |
+| 35 | Numéro masqué erroné sur la page OTP | `+237 2XX…` : le « 2 » de l'indicatif était pris pour le premier chiffre → `+237 6XX XXX X48` |
+| 36 | Code mort | Faux JWT `kemi-session` (signature aléatoire, jamais posé) et sa lecture dans `proxy.ts` supprimés |
+
 ## 5. Constats non corrigés (à arbitrer)
 
 ### Critique / élevé
 
-- **OTP SMS non branché** : `notifications/sms.js` est un mock qui **écrit le code OTP dans les logs** (`console.log`) en production. La connexion par téléphone, présentée comme la méthode principale, ne fonctionne donc pas réellement, et les codes fuitent dans les journaux. Il faut brancher un fournisseur (Twilio, Orange SMS API…) et supprimer le `console.log`.
 - **Mot de passe exposé dans l'historique git** : `daril2005` (ancien `tests/env.setup.js`). Il faut le changer s'il est réutilisé ailleurs.
 - **Brouillons publics** : `GET /products?status=draft`, `GET /products/:id` et `GET /products/slug/:slug` renvoient les produits non publiés à n'importe qui. Il faut restreindre `status ≠ active` aux rôles staff.
-- **Stockage des jetons** : les sessions sont désormais révocables (§4, n° 20), mais les jetons restent dans `localStorage`, donc lisibles en cas de XSS. Recommandation : refresh token en cookie `HttpOnly`.
 
 ### Moyen
 
-- `lib/auth.ts#createSessionToken` génère un faux JWT (signature aléatoire) qui n'est jamais appelé. Le cookie `kemi-session` n'est donc jamais posé, et la redirection « déjà connecté » de `proxy.ts` est du code mort. Il faut supprimer ce code ou le brancher sur la vraie session.
+- **Fournisseur SMS à choisir** : tant que `SMS_PROVIDER` vaut `none` en production, la connexion par téléphone est masquée. Il suffit d'ajouter une classe `SmsProvider` et une entrée dans `sms.factory.js` (voir le README du dossier).
+- `proxy.ts` redirige l'accueil vers la page de vérification tant qu'un code OTP est en cours ; avec un code valable 5 min, un visiteur qui revient à l'accueil y est renvoyé pendant toute cette durée.
 - Upload d'images : le type est contrôlé seulement sur le `mimetype` déclaré par le client (pas de vérification des octets magiques).
 - Panier stocké en cookie JSON (limite d'environ 4 Ko, soit une dizaine d'articles) et envoyé à chaque requête. `localStorage` serait plus adapté.
 - Le seed ne crée **aucune zone de livraison** : sur une base neuve, le checkout est bloqué tant qu'un admin n'en a pas créé une. Il faut ajouter Douala/Yaoundé au seed ou à la doc.

@@ -19,8 +19,8 @@ export function signRefreshToken(user, { sid, jti }) {
   );
 }
 
-export function verifyAccessToken(token) {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: 'kemi-shoes' });
+export function verifyAccessToken(token, options = {}) {
+  return jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: 'kemi-shoes', ...options });
 }
 
 export function verifyRefreshToken(token) {

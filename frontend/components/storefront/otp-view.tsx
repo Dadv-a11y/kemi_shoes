@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearOtpChallenge, createOtpChallenge, maskPhone, readOtpChallenge, type OtpChallenge } from "@/lib/auth";
-import { backendRequest, saveSession } from "@/lib/backend-api";
+import { backendRequest, onSignedIn } from "@/lib/backend-api";
 
 export function OtpView({ labels }: { labels: Record<string, string> }) {
   const pathname = usePathname();
@@ -49,8 +49,8 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
   const verify = async () => {
     if (code.length !== 6 || !challenge || remaining === 0) return;
     try {
-      const result = await backendRequest<{ accessToken: string; refreshToken: string }>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone: challenge.phone, code, name: challenge.name }) });
-      saveSession(result.accessToken, result.refreshToken);
+      await backendRequest("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone: challenge.phone, code, name: challenge.name }) });
+      onSignedIn();
       clearOtpChallenge();
       router.push(`/${locale}/boutique`);
     } catch (verifyError) {

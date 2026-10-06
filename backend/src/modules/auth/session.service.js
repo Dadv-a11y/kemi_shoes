@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { get, run } from '../../db/client.js';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/tokens.js';
+import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } from '../../utils/tokens.js';
 import { AppError, unauthorized } from '../../middleware/errorHandler.js';
 import { logger } from '../../config/logger.js';
 
@@ -87,6 +87,22 @@ export async function isSessionActive(sid, userId) {
     [sid, userId]
   );
   return Boolean(row);
+}
+
+/**
+ * Session désignée par les jetons présentés (déconnexion) : l'access token, même
+ * expiré, ou à défaut le refresh token. Signature toujours vérifiée.
+ */
+export function sessionIdFromTokens({ accessToken, refreshToken }) {
+  for (const read of [() => verifyAccessToken(accessToken, { ignoreExpiration: true }), () => verifyRefreshToken(refreshToken)]) {
+    try {
+      const { sid } = read();
+      if (sid) return sid;
+    } catch {
+      /* jeton absent ou invalide : essayer le suivant */
+    }
+  }
+  return null;
 }
 
 export async function revokeSession(sid) {

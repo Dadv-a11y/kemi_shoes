@@ -1,12 +1,10 @@
 import { verifyAccessToken } from '../utils/tokens.js';
 import { unauthorized, forbidden } from './errorHandler.js';
 import { isSessionActive } from '../modules/auth/session.service.js';
+import { readAccessToken, hasAuthCookie } from '../modules/auth/cookies.js';
 
-function bearerToken(req) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) return null;
-  return header.slice('Bearer '.length).trim();
-}
+// Jeton lu dans le cookie HttpOnly (navigateur) ou l'en-tête Bearer (scripts, supervision).
+const bearerToken = (req) => readAccessToken(req);
 
 /**
  * Décode l'access token et vérifie que sa session est toujours active : une
@@ -72,6 +70,22 @@ export function requireRole(...allowedRoles) {
     if (!allowedRoles.includes(req.user.role)) {
       return next(forbidden('Rôle insuffisant pour cette action.'));
     }
+    return next();
+  };
+}
+
+/**
+ * Protection CSRF : avec une session en cookie, le navigateur joint les jetons
+ * à toute requête vers l'API. Une requête qui modifie des données et porte un
+ * cookie de session doit donc venir d'une origine autorisée (CORS_ORIGINS).
+ * Les clients hors navigateur n'envoient pas d'en-tête Origin : non concernés.
+ */
+export function requireTrustedOrigin(allowedOrigins) {
+  const safeMethods = new Set(['GET', 'HEAD', 'OPTIONS']);
+  return (req, res, next) => {
+    if (safeMethods.has(req.method) || !hasAuthCookie(req)) return next();
+    const origin = req.headers.origin;
+    if (origin && !allowedOrigins.includes(origin)) return next(forbidden('Origine non autorisée.'));
     return next();
   };
 }

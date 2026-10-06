@@ -3,7 +3,7 @@
 ✔ fr-boutique-femme                200  /fr/boutique?categorie=femme  « Toutes les sandales »
 ✔ fr-panier-vide                   200  /fr/panier  « Votre panier est vide »
 ✔ fr-notre-histoire                200  /fr/notre-histoire  « Faire grandir un savoir-faire. »
-✔ fr-cgv                           200  /fr/cgv  « Conditions Générales de Vente »
+✔ fr-cgv                           200  /fr/cgv  « CGV »
 ✔ fr-confidentialite               200  /fr/confidentialite  « Politique de confidentialité »
 ✔ fr-mentions-legales              200  /fr/mentions-legales  « Mentions légales »
 ✔ fr-connexion                     200  /fr/compte/connexion  «  »
@@ -19,7 +19,7 @@
 ✔ en-boutique-femme                200  /en/boutique?categorie=femme  « All sandals »
 ✔ en-panier-vide                   200  /en/panier  « Your cart is empty »
 ✔ en-notre-histoire                200  /en/notre-histoire  « Growing a craft. »
-✔ en-cgv                           200  /en/cgv  « Terms and conditions »
+✔ en-cgv                           200  /en/cgv  « CGV »
 ✔ en-confidentialite               200  /en/confidentialite  « Privacy policy »
 ✔ en-mentions-legales              200  /en/mentions-legales  « Legal notice »
 ✔ en-connexion                     200  /en/compte/connexion  «  »
@@ -50,7 +50,9 @@
 ✔ admin-refuse-cliente             200  /fr/admin  « Accès réservé à l’équipe KEMI SHOES »
 ✔ produit-suggestions              200  /fr/produits/sandales-a-bague-d-orteil  « Sandales à bague d’orteil »
 ✔ otp-1-compte-a-rebours           200  /fr/compte/verification  « Vérification »
+✔ connexion-email                  200  /fr/compte  « Bonjour Cliente. »
+✔ connexion-sans-sms               200  /fr/compte/connexion  «  »
 ✔ deconnexion                      200  /fr/compte/connexion  «  »
 
-Commande passée depuis l'UI : Commande KS-10021
-53/53 vues sans erreur
+Commande passée depuis l'UI : Commande KS-10025
+55/55 vues sans erreur

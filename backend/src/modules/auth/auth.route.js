@@ -5,17 +5,18 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { authLimiter, otpRequestLimiter } from '../../middleware/rateLimit.js';
 import { env } from '../../config/env.js';
+import { isPhoneAuthAvailable } from '../notifications/sms/sms.factory.js';
+import { setAuthCookies } from './cookies.js';
 
 import {
   registerSchema, loginSchema, requestOtpSchema, verifyOtpSchema, refreshSchema, updateMeSchema,
 } from './auth.schema.js';
 
-// Le callback OAuth renvoie le navigateur vers le frontend avec les tokens dans
-// le fragment d'URL (#...) : jamais transmis au serveur ni journalisé.
+// Callback OAuth : la session est posée en cookies HttpOnly, puis retour sur le frontend
+// (le fragment ne contient aucun jeton, seulement le signal « connecté »).
 function redirectToFrontend(req, res) {
-  const { accessToken, refreshToken } = req.user;
-  const fragment = new URLSearchParams({ accessToken, refreshToken }).toString();
-  res.redirect(`${env.FRONTEND_URL}/fr/compte/connexion#${fragment}`);
+  setAuthCookies(res, req.user);
+  res.redirect(`${env.FRONTEND_URL}/fr/compte/connexion#signedIn=1`);
 }
 
 const failureRedirect = `${env.FRONTEND_URL}/fr/compte/connexion#error=oauth`;
@@ -33,14 +34,15 @@ router.post('/otp/verify', authLimiter, validate(verifyOtpSchema), controller.ve
 // --- Session ---
 router.post('/refresh', validate(refreshSchema), controller.refresh);
 // Révocation côté serveur : la session courante, ou toutes celles du compte.
-router.post('/logout', requireAuth, controller.logout);
+router.post('/logout', controller.logout);
 router.post('/logout-all', requireAuth, controller.logoutAll);
 router.get('/me', requireAuth, controller.me);
 router.patch('/me', requireAuth, validate(updateMeSchema), controller.updateMe);
 router.delete('/me', requireAuth, controller.deleteMe);
 
 // Liste des fournisseurs OAuth actifs — le frontend n'affiche que ceux-là.
-router.get('/providers', (req, res) => res.json(oauthEnabled));
+// Seules les méthodes réellement configurées sont proposées par le frontend.
+router.get('/providers', (req, res) => res.json({ password: true, phone: isPhoneAuthAvailable(), ...oauthEnabled }));
 
 // --- OAuth Google / Facebook (actives seulement si les identifiants sont configurés) ---
 if (oauthEnabled.google) {

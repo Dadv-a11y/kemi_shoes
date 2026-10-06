@@ -30,8 +30,9 @@ export const verifyOtpSchema = z.object({
   }),
 });
 
+// Le refresh token arrive normalement par cookie HttpOnly ; le corps reste accepté pour les clients hors navigateur.
 export const refreshSchema = z.object({
-  body: z.object({ refreshToken: z.string().min(10) }),
+  body: z.object({ refreshToken: z.string().min(10).optional() }).optional(),
 });
 export const updateMeSchema = z.object({
   body: z.object({
