@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { SiteFooter } from "@/components/storefront/site-footer";
 import { SiteHeader } from "@/components/storefront/site-header";
+import { OtpPendingBanner } from "@/components/storefront/otp-pending-banner";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -14,6 +15,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
+      <OtpPendingBanner />
       {children}
       <SiteFooter />
     </>

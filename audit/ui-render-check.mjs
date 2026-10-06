@@ -227,6 +227,15 @@ await audit('otp-1-compte-a-rebours', '/fr/compte/connexion', {
     const timer = (await page.locator('.otp-timer strong').textContent()) ?? '';
     if (!/^0[4-5]:\d\d$/.test(timer)) issues.push(`compte à rebours inattendu : ${timer}`);
     if (await page.getByRole('button', { name: 'Renvoyer le code' }).count()) issues.push('bouton « Renvoyer » visible avant expiration');
+    // Code en attente : l'accueil reste accessible (plus de redirection forcée), un bandeau propose de reprendre.
+    await page.goto(`${FRONT}/fr`, { waitUntil: 'load' });
+    await page.waitForTimeout(1200);
+    if (new URL(page.url()).pathname !== '/fr') issues.push(`accueil redirigé vers ${page.url()}`);
+    if (!(await page.locator('.otp-pending-banner').count())) issues.push('bandeau « code en attente » absent');
+    await step(page, 'otp-3-bandeau-accueil');
+    await page.locator('.otp-pending-banner').getByRole('link', { name: 'Saisir le code' }).click();
+    await page.waitForURL(/verification/, { timeout: 10000 });
+    await page.waitForTimeout(800);
     // Simule l'expiration côté navigateur : le bouton de renvoi doit apparaître.
     await page.evaluate(() => {
       const raw = document.cookie.split('; ').find((c) => c.startsWith('kemi-otp-challenge='));
@@ -237,6 +246,22 @@ await audit('otp-1-compte-a-rebours', '/fr/compte/connexion', {
     await page.reload({ waitUntil: 'load' });
     await page.waitForTimeout(1200);
     if (!(await page.getByRole('button', { name: 'Renvoyer le code' }).count())) issues.push('pas de bouton « Renvoyer » après expiration');
+  },
+});
+
+// « Ignorer » efface le rappel du code en attente.
+await audit('otp-ignorer-bandeau', '/fr/compte/connexion', {
+  shot: false,
+  action: async (page, issues) => {
+    await page.fill('input[type="tel"]', `69${String(Date.now()).slice(-7)}`);
+    await page.getByRole('button', { name: 'Recevoir un code' }).click();
+    await page.waitForURL(/verification/, { timeout: 10000 });
+    await page.goto(`${FRONT}/fr/boutique`, { waitUntil: 'load' });
+    await page.waitForTimeout(1200);
+    await page.locator('.otp-pending-banner').getByRole('button', { name: 'Ignorer' }).click();
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(1200);
+    if (await page.locator('.otp-pending-banner').count()) issues.push('bandeau toujours affiché après « Ignorer »');
   },
 });
 

@@ -25,7 +25,7 @@ Résultats bruts : `audit/resultats/`. Le script de rendu écrit une capture de 
 |---|---|---|
 | Tests backend | 47/93 (mot de passe de la base de test codé en dur) | **115/115** |
 | Contrat API | 77/83 | **118/118** (62 routes) |
-| Rendu des vues | 22/49, aucune commande possible | **55/55**, commande passée depuis l'UI |
+| Rendu des vues | 22/49, aucune commande possible | **56/56**, commande passée depuis l'UI |
 | `npm audit --omit=dev` (frontend) | 1 critique, plusieurs élevées | **0** |
 | Lint frontend | 1 erreur | 0 erreur (1 avertissement) |
 
@@ -122,6 +122,7 @@ Tests ajoutés : `errorHandler.test.js`, suppression de zone référencée, alle
 | 34 | Inscription par e-mail impossible | Le formulaire e-mail n'avait pas de champ « Nom » en mode inscription (refus 400 de l'API) |
 | 35 | Numéro masqué erroné sur la page OTP | `+237 2XX…` : le « 2 » de l'indicatif était pris pour le premier chiffre → `+237 6XX XXX X48` |
 | 36 | Code mort | Faux JWT `kemi-session` (signature aléatoire, jamais posé) et sa lecture dans `proxy.ts` supprimés |
+| 37 | Redirection forcée vers la vérification OTP | `proxy.ts` renvoyait l'accueil vers la page de vérification pendant toute la validité du code (5 min). Remplacé par un bandeau non bloquant sur toute la boutique : « Saisir le code » ou « Ignorer » (efface le rappel) ; il disparaît à l'expiration du code |
 
 ## 5. Constats non corrigés (à arbitrer)
 
@@ -133,7 +134,6 @@ Tests ajoutés : `errorHandler.test.js`, suppression de zone référencée, alle
 ### Moyen
 
 - **Fournisseur SMS à choisir** : tant que `SMS_PROVIDER` vaut `none` en production, la connexion par téléphone est masquée. Il suffit d'ajouter une classe `SmsProvider` et une entrée dans `sms.factory.js` (voir le README du dossier).
-- `proxy.ts` redirige l'accueil vers la page de vérification tant qu'un code OTP est en cours ; avec un code valable 5 min, un visiteur qui revient à l'accueil y est renvoyé pendant toute cette durée.
 - Upload d'images : le type est contrôlé seulement sur le `mimetype` déclaré par le client (pas de vérification des octets magiques).
 - Panier stocké en cookie JSON (limite d'environ 4 Ko, soit une dizaine d'articles) et envoyé à chaque requête. `localStorage` serait plus adapté.
 - Le seed ne crée **aucune zone de livraison** : sur une base neuve, le checkout est bloqué tant qu'un admin n'en a pas créé une. Il faut ajouter Douala/Yaoundé au seed ou à la doc.

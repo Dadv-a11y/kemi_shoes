@@ -50,9 +50,10 @@
 ✔ admin-refuse-cliente             200  /fr/admin  « Accès réservé à l’équipe KEMI SHOES »
 ✔ produit-suggestions              200  /fr/produits/sandales-a-bague-d-orteil  « Sandales à bague d’orteil »
 ✔ otp-1-compte-a-rebours           200  /fr/compte/verification  « Vérification »
+✔ otp-ignorer-bandeau              200  /fr/boutique  « Toutes les sandales »
 ✔ connexion-email                  200  /fr/compte  « Bonjour Cliente. »
 ✔ connexion-sans-sms               200  /fr/compte/connexion  «  »
 ✔ deconnexion                      200  /fr/compte/connexion  «  »
 
-Commande passée depuis l'UI : Commande KS-10025
-55/55 vues sans erreur
+Commande passée depuis l'UI : Commande KS-10026
+56/56 vues sans erreur
