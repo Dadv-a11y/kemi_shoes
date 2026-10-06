@@ -7,6 +7,8 @@ import {
   verifyPhoneOtpAndAuthenticate,
   findOrCreateOAuthUser,
   refreshSession,
+  logout,
+  logoutEverywhere,
 } from '../../src/modules/auth/auth.service.js';
 import { requestOtp } from '../../src/modules/auth/otp.service.js';
 import { smsSender } from '../../src/modules/notifications/sms.js';
@@ -126,5 +128,37 @@ describe('refreshSession', () => {
 
   test('rejette un refresh token invalide', async () => {
     await expect(refreshSession('token-invalide')).rejects.toThrow();
+  });
+
+  test('rotation : l’ancien refresh token est refusé après renouvellement', async () => {
+    const { refreshToken } = await registerWithPassword({ name: 'R', email: 'rot@example.com', password: 'Password123!' });
+    const refreshed = await refreshSession(refreshToken);
+    expect(refreshed.refreshToken).not.toBe(refreshToken);
+    // Rejeu immédiat (autre onglet) : refusé sans révoquer la session.
+    await expect(refreshSession(refreshToken)).rejects.toMatchObject({ statusCode: 401, code: 'REFRESH_SUPERSEDED' });
+    await expect(refreshSession(refreshed.refreshToken)).resolves.toHaveProperty('accessToken');
+  });
+
+  test('rejeu d’un refresh token ancien (hors délai de grâce) : la session est révoquée', async () => {
+    const { refreshToken } = await registerWithPassword({ name: 'R', email: 'vol@example.com', password: 'Password123!' });
+    const first = await refreshSession(refreshToken);
+    const second = await refreshSession(first.refreshToken);
+    await expect(refreshSession(refreshToken)).rejects.toMatchObject({ statusCode: 401 });
+    // Le jeton volé a provoqué la révocation : même le dernier jeton légitime est refusé.
+    await expect(refreshSession(second.refreshToken)).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  test('déconnexion : la session révoquée ne peut plus être renouvelée', async () => {
+    const { refreshToken, accessToken } = await registerWithPassword({ name: 'R', email: 'out@example.com', password: 'Password123!' });
+    await logout(verifyAccessToken(accessToken).sid);
+    await expect(refreshSession(refreshToken)).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  test('déconnexion de tous les appareils', async () => {
+    const a = await registerWithPassword({ name: 'R', email: 'all@example.com', password: 'Password123!' });
+    const b = await loginWithPassword({ email: 'all@example.com', password: 'Password123!' });
+    await logoutEverywhere(a.user.id);
+    await expect(refreshSession(a.refreshToken)).rejects.toMatchObject({ statusCode: 401 });
+    await expect(refreshSession(b.refreshToken)).rejects.toMatchObject({ statusCode: 401 });
   });
 });

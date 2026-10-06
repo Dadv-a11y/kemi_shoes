@@ -1,6 +1,7 @@
 export const OTP_COOKIE = "kemi-otp-challenge";
 export const SESSION_COOKIE = "kemi-session";
-export const OTP_VALIDITY_SECONDS = 45;
+// Repli si le backend ne renvoie pas d'échéance (OTP_TTL_MINUTES côté API, 5 min par défaut).
+export const OTP_VALIDITY_SECONDS = 5 * 60;
 export const SESSION_VALIDITY_SECONDS = 60 * 60 * 24 * 30;
 
 export type OtpChallenge = {
@@ -26,15 +27,17 @@ export function readOtpChallenge(): OtpChallenge | null {
   }
 }
 
-export function createOtpChallenge(phone: string, mode: OtpChallenge["mode"], name?: string) {
+/** expiresAt : échéance du code renvoyée par POST /auth/otp/request (ISO). */
+export function createOtpChallenge(phone: string, mode: OtpChallenge["mode"], name?: string, expiresAt?: string) {
+  const serverExpiry = expiresAt ? Date.parse(expiresAt) : Number.NaN;
   const challenge: OtpChallenge = {
     token: crypto.randomUUID(),
-    expiresAt: Date.now() + OTP_VALIDITY_SECONDS * 1000,
+    expiresAt: Number.isFinite(serverExpiry) ? serverExpiry : Date.now() + OTP_VALIDITY_SECONDS * 1000,
     phone,
     mode,
     ...(name ? { name } : {}),
   };
-  document.cookie = `${OTP_COOKIE}=${encodeURIComponent(JSON.stringify(challenge))}; path=/; max-age=${OTP_VALIDITY_SECONDS}; samesite=lax`;
+  document.cookie = `${OTP_COOKIE}=${encodeURIComponent(JSON.stringify(challenge))}; path=/; max-age=${Math.max(1, Math.ceil((challenge.expiresAt - Date.now()) / 1000))}; samesite=lax`;
   return challenge;
 }
 

@@ -22,6 +22,16 @@ function generateSixDigitCode() {
  * retourné à l'appelant HTTP — uniquement transmis via le canal SMS/WhatsApp.
  */
 export async function requestOtp(phone) {
+  // Un nouveau code n'est émis qu'une fois le précédent expiré (ou épuisé) : tant
+  // qu'il est valable, on renvoie son échéance sans renvoyer de SMS.
+  const pending = await get(
+    `SELECT expiresAt FROM OtpCode WHERE phone = ? AND consumed = 0 AND attempts < ? ORDER BY createdAt DESC LIMIT 1`,
+    [phone, env.OTP_MAX_ATTEMPTS]
+  );
+  if (pending && new Date(pending.expiresAt).getTime() > Date.now()) {
+    return { expiresAt: new Date(pending.expiresAt).toISOString(), resent: false };
+  }
+
   const code = generateSixDigitCode();
   const expiresAt = new Date(Date.now() + env.OTP_TTL_MINUTES * 60 * 1000).toISOString();
 
@@ -38,7 +48,7 @@ export async function requestOtp(phone) {
   }
   otpRequestsTotal.inc();
 
-  return { expiresAt };
+  return { expiresAt, resent: true };
 }
 
 /**

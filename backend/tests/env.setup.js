@@ -1,5 +1,10 @@
+import dotenv from 'dotenv';
+
+dotenv.config({ quiet: true });
+
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL =  'postgresql://postgres:daril2005@localhost:5432/kemi_shoes_test';
+// Base de test lue depuis TEST_DATABASE_URL (.env) : aucun mot de passe en dur dans le dépôt.
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/kemi_shoes_test';
 process.env.DATABASE_SSL = 'false';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-not-for-prod-use-only';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-not-for-prod-use-only';

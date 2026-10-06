@@ -1,4 +1,4 @@
-import { type Locale, type Product, type ProductCategory } from "@/lib/catalog";
+import { BASE_MATERIAL, type Locale, type Product, type ProductCategory } from "@/lib/catalog";
 import { resolveMediaUrl } from "@/lib/backend-api";
 
 export type CatalogApiProduct = {
@@ -12,6 +12,7 @@ export type CatalogApiProduct = {
   category: string;
   price: number;
   status: string;
+  materialCustomizable?: boolean | number;
   images?: Array<{ url: string; isMain?: boolean }>;
   colors?: Array<{ name: string; hex: string }>;
   sizes?: Array<{ size: string; available: boolean | number }>;
@@ -43,7 +44,9 @@ export function mapProduct(product: CatalogApiProduct): Product {
     images: ordered.length ? ordered : [image],
     category: mapCategory(product.category),
     colors: (product.colors ?? []).map((color) => color.hex),
-    material: { fr: "Cuir", en: "Leather" },
+    colorOptions: product.colors ?? [],
+    material: { fr: BASE_MATERIAL.fr, en: BASE_MATERIAL.en },
+    materialCustomizable: Boolean(product.materialCustomizable),
     subtitle: { fr: product.descriptionFr, en: product.descriptionEn },
     availableSizes: sizes.filter((size) => Boolean(size.available)).map((size) => size.size),
     unavailableSizes: sizes.filter((size) => !Boolean(size.available)).map((size) => size.size),

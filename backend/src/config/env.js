@@ -30,6 +30,8 @@ const envSchema = z.object({
 
   OTP_TTL_MINUTES: z.coerce.number().default(5),
   OTP_MAX_ATTEMPTS: z.coerce.number().default(5),
+  // Tentatives de connexion / inscription / OTP par IP et par 15 min.
+  AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),

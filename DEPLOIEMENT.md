@@ -290,7 +290,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    # Métriques Prometheus : ne pas exposer publiquement
+    # Métriques Prometheus : l'API exige déjà un jeton ADMIN (Authorization: Bearer …) ;
+    # on les garde en plus hors d'Internet.
     location /metrics { allow 127.0.0.1; deny all; proxy_pass http://127.0.0.1:4000; }
 }
 ```
@@ -400,4 +401,6 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | `GET /settings` *(nouvelle)* | Pied de page (WhatsApp, réseaux, adresse) |
 | 👑👑 `PUT /settings` *(nouvelle)* | Admin › Paramètres › Informations boutique |
 | `GET /media` *(nouvelle)* | Accueil, « Notre histoire » (visuels de marque) |
-| `GET /health`, `GET /metrics` | Supervision (hors frontend) |
+| `GET /health` | Supervision (hors frontend) |
+| 👑 `GET /metrics` | Supervision Prometheus — jeton d'un compte ADMIN requis |
+| `POST /auth/logout`, `POST /auth/logout-all` *(nouvelles)* | Compte › Se déconnecter (révocation de la session côté serveur) |

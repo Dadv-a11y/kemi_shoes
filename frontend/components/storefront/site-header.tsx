@@ -13,7 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { backendRequest } from "@/lib/backend-api";
+import { backendRequest, hasSession } from "@/lib/backend-api";
 
 type Notification = {
   id: string;
@@ -35,8 +35,10 @@ export function SiteHeader() {
       .catch(() => undefined);
   }, []);
   useEffect(() => {
+    // Route authentifiée : inutile (et source d'un 401 par page) pour un visiteur anonyme.
+    if (!hasSession()) return;
     backendRequest<Notification[]>("/notifications")
-      .then(setNotifications)
+      .then((items) => setNotifications(items.filter((item) => !item.readAt)))
       .catch(() => setNotifications([]));
   }, []);
   const openNotification = async (notification: Notification) => {
@@ -49,13 +51,17 @@ export function SiteHeader() {
     } catch {
       metadata = undefined;
     }
-    if (metadata?.reviewUrl)
-      window.location.href = metadata.reviewUrl.includes("?")
-        ? `${metadata.reviewUrl}&review=1`
-        : `${metadata.reviewUrl}?review=1`;
+    // Marquer comme lue AVANT de naviguer : une navigation pleine page annulerait la requête.
     await backendRequest<void>(`/notifications/${notification.id}/read`, {
       method: "PATCH",
     }).catch(() => undefined);
+    setNotifications((current) => current.filter((item) => item.id !== notification.id));
+    if (metadata?.reviewUrl)
+      window.location.assign(
+        metadata.reviewUrl.includes("?")
+          ? `${metadata.reviewUrl}&review=1`
+          : `${metadata.reviewUrl}?review=1`,
+      );
   };
 
   return (

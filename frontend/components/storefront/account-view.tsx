@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleUserRound, Copy, ExternalLink, MapPin, Pencil, Share2, Truck, X } from "lucide-react";
@@ -8,14 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { backendRequest, clearSession, hasSession } from "@/lib/backend-api";
+import { backendRequest, clearSession, hasSession, resolveMediaUrl, signOut as revokeSession } from "@/lib/backend-api";
 import { formatPrice, type Locale } from "@/lib/catalog";
 
 type Labels = Record<string, string>;
 type Filter = "all" | "inProgress" | "delivered" | "cancelled";
 
 type User = { id: string; name: string | null; email: string | null; phone: string | null; provider: "PASSWORD" | "PHONE_OTP" | "GOOGLE" | "FACEBOOK" };
-type OrderItem = { id: string; productNameFr: string; quantity: number; size: string; unitPriceFcfa: number };
+type OrderItem = { id: string; productNameFr: string; quantity: number; size: string; unitPriceFcfa: number; imageUrl?: string | null; slugFr?: string | null; slugEn?: string | null };
+
+/** Vignette d'un article commandé : photo du produit (repli : dégradé), lien vers sa fiche. */
+function OrderItemThumb({ item, index, locale, caption }: { item: OrderItem; index: number; locale: Locale; caption: string }) {
+  const slug = locale === "en" ? item.slugEn : item.slugFr;
+  const content = <>{item.imageUrl && <Image src={resolveMediaUrl(item.imageUrl)} alt={item.productNameFr} fill sizes="(max-width: 760px) 30vw, 160px" />}<span>{caption}</span></>;
+  const className = `product-thumb thumb-${(index % 3) + 1}${item.imageUrl ? " has-image" : ""}`;
+  return slug ? <Link href={`/${locale}/produits/${slug}`} className={className}>{content}</Link> : <div className={className}>{content}</div>;
+}
 type Order = {
   id: string; reference: string; status: string; paymentMethod: string; paymentStatus: string; createdAt: string;
   subtotalFcfa: number; deliveryFeeFcfa: number; totalFcfa: number; deliveryZoneId: string;
@@ -76,7 +85,8 @@ export function AccountView({ labels, locale = "fr" }: { labels: Labels; locale?
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const signOut = () => { clearSession(); router.push(`/${locale}/compte/connexion`); };
+  // Révoque la session côté serveur (ou toutes celles du compte) avant de quitter l'espace.
+  const signOut = async (everywhere = false) => { await revokeSession(everywhere); router.push(`/${locale}/compte/connexion`); };
   const deleteAccount = async () => {
     if (!window.confirm(labels.deleteConfirm)) return;
     try {
@@ -101,13 +111,13 @@ export function AccountView({ labels, locale = "fr" }: { labels: Labels; locale?
         {selectedOrder && <OrderDetail orderId={selectedOrder.id} locale={locale} labels={labels} onClose={() => setSelectedOrder(null)} />}
         {sharing && <SharePanel order={sharing} locale={locale} labels={labels} onClose={() => setSharing(null)} />}
       </TabsContent>
-      <TabsContent value="information" className="account-content"><InformationPanel user={user} addresses={addresses} labels={labels} onUserChange={setUser} onAddressesChange={setAddresses} onSignOut={signOut} onDelete={deleteAccount} /></TabsContent>
+      <TabsContent value="information" className="account-content"><InformationPanel user={user} addresses={addresses} labels={labels} onUserChange={setUser} onAddressesChange={setAddresses} onSignOut={() => void signOut()} onSignOutAll={() => void signOut(true)} onDelete={deleteAccount} /></TabsContent>
     </Tabs></div></main>;
 }
 
 function OrderCard({ order, locale, labels, onDetails, onShare }: { order: Order; locale: Locale; labels: Labels; onDetails: () => void; onShare: () => void }) {
   const kind = orderFilter(order.status);
-  return <Card className="order-card"><CardHeader className="order-card-header"><div><CardTitle>{order.reference}</CardTitle><span>{new Date(order.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></div><Badge className={`status-badge status-${kind}`}>{labels[kind]}</Badge></CardHeader><CardContent><div className="order-products">{order.items.slice(0, 3).map((item, index) => <div className={`product-thumb thumb-${index + 1}`} key={item.id}><span>{item.productNameFr}</span></div>)}</div><div className="order-card-bottom"><strong>{formatPrice(order.totalFcfa, locale)}</strong><Button variant="ghost" size="sm" onClick={onDetails}>{labels.viewDetails}<ChevronRight data-icon="inline-end" /></Button></div>{kind === "delivered" && <Button variant="outline" size="sm" className="share-order" onClick={onShare}><Share2 data-icon="inline-start" />{labels.reorder}</Button>}</CardContent></Card>;
+  return <Card className="order-card"><CardHeader className="order-card-header"><div><CardTitle>{order.reference}</CardTitle><span>{new Date(order.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></div><Badge className={`status-badge status-${kind}`}>{labels[kind]}</Badge></CardHeader><CardContent><div className="order-products">{order.items.slice(0, 3).map((item, index) => <OrderItemThumb key={item.id} item={item} index={index} locale={locale} caption={item.productNameFr} />)}</div><div className="order-card-bottom"><strong>{formatPrice(order.totalFcfa, locale)}</strong><Button variant="ghost" size="sm" onClick={onDetails}>{labels.viewDetails}<ChevronRight data-icon="inline-end" /></Button></div>{kind === "delivered" && <Button variant="outline" size="sm" className="share-order" onClick={onShare}><Share2 data-icon="inline-start" />{labels.reorder}</Button>}</CardContent></Card>;
 }
 
 function OrderDetail({ orderId, locale, labels, onClose }: { orderId: string; locale: Locale; labels: Labels; onClose: () => void }) {
@@ -127,7 +137,7 @@ function OrderDetail({ orderId, locale, labels, onClose }: { orderId: string; lo
   return <div className="account-overlay"><Card className="order-detail"><CardHeader><div><span className="section-kicker">{labels.order}</span><CardTitle>{order?.reference ?? "…"}</CardTitle></div><Button variant="ghost" size="icon" aria-label={labels.close} onClick={onClose}><X /></Button></CardHeader>
     {order ? <CardContent><div className="tracking-title"><Truck aria-hidden="true" /><span>{labels.tracking}</span></div><div className="timeline">{steps.map((step, index) => <div className={`timeline-step ${index < reached ? "is-done" : ""}`} key={step}><span className="timeline-dot">{index < reached ? <Check /> : index + 1}</span><span>{step}</span></div>)}</div>
       {zone && order.status !== "DELIVERED" && order.status !== "CANCELLED" && <p className="eta-note">{zone.etaMinHours}–{zone.etaMaxHours}h · {zone.regionOrCity || zone.country}</p>}
-      <div className="detail-products">{order.items.map((item, index) => <div className={`product-thumb thumb-${(index % 3) + 1}`} key={item.id}><span>{item.productNameFr} × {item.quantity} ({item.size})</span></div>)}</div>
+      <div className="detail-products">{order.items.map((item, index) => <OrderItemThumb key={item.id} item={item} index={index} locale={locale} caption={`${item.productNameFr} × ${item.quantity} (${item.size})`} />)}</div>
       <div className="detail-list"><div><span>{labels.address}</span><strong>{[order.addressDistrict, order.addressCity].filter(Boolean).join(", ")}</strong></div><div><span>{labels.payment}</span><strong>{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</strong></div><div><span>{labels.paymentStatus}</span><strong>{paymentLabel}</strong></div><div><span>{labels.subtotal}</span><strong>{formatPrice(order.subtotalFcfa, locale)}</strong></div><div><span>{labels.shipping}</span><strong>{formatPrice(order.deliveryFeeFcfa, locale)}</strong></div><div className="detail-total"><span>{labels.total}</span><strong>{formatPrice(order.totalFcfa, locale)}</strong></div></div>
       {order.paymentMethod !== "CASH_ON_DELIVERY" && order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && <Link className="full-button" href={`/${locale}/commande/suivi?order=${order.id}`}>{labels.paymentStatus}</Link>}
       <Button className="full-button" onClick={() => window.open(`https://wa.me/237678666069?text=${encodeURIComponent(`Commande ${order.reference}`)}`, "_blank", "noopener")}><ExternalLink data-icon="inline-start" />{labels.followWhatsApp}</Button><Link className="help-link" href={`/${locale}/mentions-legales`}>{labels.needHelp}</Link></CardContent>
@@ -144,7 +154,7 @@ function SharePanel({ order, locale, labels, onClose }: { order: Order; locale: 
 
 const emptyAddress: AddressForm = { label: "", fullName: "", phone: "", country: "Cameroun", city: "", district: "", street: "" };
 
-function InformationPanel({ user, addresses, labels, onUserChange, onAddressesChange, onSignOut, onDelete }: { user: User; addresses: Address[]; labels: Labels; onUserChange: (user: User) => void; onAddressesChange: (addresses: Address[]) => void; onSignOut: () => void; onDelete: () => void }) {
+function InformationPanel({ user, addresses, labels, onUserChange, onAddressesChange, onSignOut, onSignOutAll, onDelete }: { user: User; addresses: Address[]; labels: Labels; onUserChange: (user: User) => void; onAddressesChange: (addresses: Address[]) => void; onSignOut: () => void; onSignOutAll: () => void; onDelete: () => void }) {
   const [profile, setProfile] = useState({ name: user.name ?? "", email: user.email ?? "" });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -197,7 +207,7 @@ function InformationPanel({ user, addresses, labels, onUserChange, onAddressesCh
       {addresses.map((address) => editing === address.id ? <AddressEditor key={address.id} form={form} labels={labels} onChange={setForm} onSave={saveAddress} onCancel={() => setEditing(null)} /> : <AddressCard key={address.id} address={address} labels={labels} onEdit={() => startEdit(address)} onDefault={() => setDefault(address.id)} onDelete={() => removeAddress(address.id)} />)}
       {editing === "new" ? <AddressEditor form={form} labels={labels} onChange={setForm} onSave={saveAddress} onCancel={() => setEditing(null)} /> : <Button variant="outline" className="full-button" onClick={() => startEdit()}><MapPin data-icon="inline-start" />{labels.addAddress}</Button>}
     </CardContent></Card></div>
-    <div className="account-footer-actions"><Button variant="ghost" onClick={onSignOut}>{labels.signOut}</Button><Button variant="ghost" className="danger-action" onClick={onDelete}>{labels.deleteAccount}</Button></div></div>;
+    <div className="account-footer-actions"><Button variant="ghost" onClick={onSignOut}>{labels.signOut}</Button><Button variant="ghost" onClick={onSignOutAll}>{labels.signOutAll}</Button><Button variant="ghost" className="danger-action" onClick={onDelete}>{labels.deleteAccount}</Button></div></div>;
 }
 
 function EditableField({ label, value, type = "text", onChange }: { label: string; value: string; type?: string; onChange: (value: string) => void }) {

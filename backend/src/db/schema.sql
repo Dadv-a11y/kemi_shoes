@@ -218,3 +218,20 @@ CREATE TABLE IF NOT EXISTS MediaAsset (
   altEn     TEXT,
   createdAt TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+
+-- Sessions révocables : chaque connexion crée une session ; le refresh token
+-- (rotatif) et l'access token portent son identifiant (sid). Révoquer la session
+-- (déconnexion, changement de rôle, suppression du compte) invalide immédiatement
+-- les deux jetons.
+CREATE TABLE IF NOT EXISTS Session (
+  id            TEXT PRIMARY KEY,
+  userId        TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  refreshHash   TEXT NOT NULL,
+  previousHash  TEXT,
+  rotatedAt     TIMESTAMPTZ,
+  expiresAt     TIMESTAMPTZ NOT NULL,
+  revokedAt     TIMESTAMPTZ,
+  createdAt     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  lastUsedAt    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_session_user ON Session(userId);

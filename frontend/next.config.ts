@@ -7,6 +7,8 @@ const backendOrigin = new URL(
 );
 
 const nextConfig: NextConfig = {
+  // app/global-not-found.tsx : 404 réelle pour les URL sans route (voir ce fichier).
+  experimental: { globalNotFound: true },
   // Build autonome : .next/standalone contient server.js + les node_modules
   // strictement nécessaires (voir scripts/standalone.mjs et DEPLOIEMENT.md).
  
@@ -21,7 +23,9 @@ const nextConfig: NextConfig = {
     ],
     // En local le backend tourne sur localhost : l'optimiseur d'images refuse
     // par défaut les IP privées.
-    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production",
+    // ALLOW_LOCAL_IMAGES=true permet de tester un build de production en local
+    // (`next start` avec le backend sur localhost).
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production" || process.env.ALLOW_LOCAL_IMAGES === "true",
   },
 };
 

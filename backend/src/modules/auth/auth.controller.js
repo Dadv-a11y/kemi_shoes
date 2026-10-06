@@ -16,7 +16,7 @@ export async function login(req, res) {
 export async function requestOtp(req, res) {
   const result = await authService.requestPhoneOtp(req.body.phone);
   // On ne renvoie jamais le code lui-même dans la réponse HTTP.
-  res.json({ message: 'Code envoyé.', expiresAt: result.expiresAt });
+  res.json({ message: result.resent ? 'Code envoyé.' : 'Un code valide a déjà été envoyé.', expiresAt: result.expiresAt, resent: result.resent });
 }
 
 export async function verifyOtp(req, res) {
@@ -28,6 +28,18 @@ export async function verifyOtp(req, res) {
 export async function refresh(req, res) {
   const result = await authService.refreshSession(req.body.refreshToken);
   res.json(result);
+}
+
+export async function logout(req, res) {
+  await authService.logout(req.user.sessionId);
+  audit(req, { action: 'auth.logout', entityType: 'User', entityId: req.user.id });
+  res.status(204).send();
+}
+
+export async function logoutAll(req, res) {
+  await authService.logoutEverywhere(req.user.id);
+  audit(req, { action: 'auth.logout_all', entityType: 'User', entityId: req.user.id });
+  res.status(204).send();
 }
 
 export async function me(req, res) {

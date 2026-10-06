@@ -6,7 +6,8 @@ import { SiteHeader } from "@/components/storefront/site-header";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname === "/fr/admin" || pathname.startsWith("/fr/admin/") || pathname === "/en/admin" || pathname.startsWith("/en/admin/");
+  // /admin (sans locale) existe aussi : il ne doit pas hériter de l'en-tête boutique.
+  const isAdmin = /^\/((fr|en)\/)?admin(\/|$)/.test(pathname);
 
   if (isAdmin) return <>{children}</>;
 

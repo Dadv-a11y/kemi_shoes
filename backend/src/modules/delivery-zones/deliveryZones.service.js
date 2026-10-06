@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { get, all, run } from '../../db/client.js';
-import { notFound } from '../../middleware/errorHandler.js';
+import { conflict, notFound } from '../../middleware/errorHandler.js';
 
 function hydrate(zone) {
   if (!zone) return null;
@@ -51,5 +51,9 @@ export async function updateZone(id, input) {
 export async function deleteZone(id) {
   const existing = await get(`SELECT id FROM DeliveryZone WHERE id = ?`, [id]);
   if (!existing) throw notFound('Zone de livraison introuvable.');
+  // Les commandes référencent leur zone : on refuse la suppression plutôt que de
+  // casser la contrainte (désactiver la zone la retire du checkout).
+  const { total } = await get(`SELECT COUNT(*) as total FROM "Order" WHERE deliveryZoneId = ?`, [id]);
+  if (Number(total) > 0) throw conflict('Des commandes utilisent cette zone : désactivez-la plutôt que de la supprimer.');
   await run(`DELETE FROM DeliveryZone WHERE id = ?`, [id]);
 }

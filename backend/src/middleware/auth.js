@@ -1,23 +1,44 @@
 import { verifyAccessToken } from '../utils/tokens.js';
 import { unauthorized, forbidden } from './errorHandler.js';
+import { isSessionActive } from '../modules/auth/session.service.js';
+
+function bearerToken(req) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return null;
+  return header.slice('Bearer '.length).trim();
+}
 
 /**
- * Vérifie le token d'accès Bearer et attache req.user = { id, role }.
- * Rejette avec 401 si absent/invalide/expiré — jamais de fallback silencieux
+ * Décode l'access token et vérifie que sa session est toujours active : une
+ * session révoquée (déconnexion, changement de rôle, compte supprimé) invalide
+ * immédiatement le jeton, sans attendre son expiration.
+ */
+async function authenticate(token) {
+  let payload;
+  try {
+    payload = verifyAccessToken(token);
+  } catch {
+    return null;
+  }
+  if (!(await isSessionActive(payload.sid, payload.sub))) return null;
+  return { id: payload.sub, role: payload.role, sessionId: payload.sid };
+}
+
+/**
+ * Vérifie le token d'accès Bearer et attache req.user = { id, role, sessionId }.
+ * Rejette avec 401 si absent/invalide/expiré/révoqué — jamais de fallback silencieux
  * vers un utilisateur anonyme sur une route protégée (OWASP A01 - broken access control).
  */
-export function requireAuth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return next(unauthorized('Token d’accès manquant.'));
-  }
-  const token = header.slice('Bearer '.length).trim();
+export async function requireAuth(req, res, next) {
+  const token = bearerToken(req);
+  if (!token) return next(unauthorized('Token d’accès manquant.'));
   try {
-    const payload = verifyAccessToken(token);
-    req.user = { id: payload.sub, role: payload.role };
+    const user = await authenticate(token);
+    if (!user) return next(unauthorized('Token d’accès invalide, expiré ou révoqué.'));
+    req.user = user;
     return next();
-  } catch {
-    return next(unauthorized('Token d’accès invalide ou expiré.'));
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -26,16 +47,17 @@ export function requireAuth(req, res, next) {
  * utile pour le checkout invité où req.user est optionnel mais doit être pris en
  * compte s'il est présent (rattachement de commande à un compte existant).
  */
-export function optionalAuth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) return next();
+export async function optionalAuth(req, res, next) {
+  const token = bearerToken(req);
+  if (!token) return next();
   try {
-    const payload = verifyAccessToken(header.slice('Bearer '.length).trim());
-    req.user = { id: payload.sub, role: payload.role };
-  } catch {
-    // token optionnel invalide -> on continue en invité plutôt que de bloquer.
+    // token optionnel invalide ou révoqué -> on continue en invité plutôt que de bloquer.
+    const user = await authenticate(token);
+    if (user) req.user = user;
+    return next();
+  } catch (error) {
+    return next(error);
   }
-  return next();
 }
 
 /**

@@ -32,6 +32,9 @@ router.post('/otp/verify', authLimiter, validate(verifyOtpSchema), controller.ve
 
 // --- Session ---
 router.post('/refresh', validate(refreshSchema), controller.refresh);
+// Révocation côté serveur : la session courante, ou toutes celles du compte.
+router.post('/logout', requireAuth, controller.logout);
+router.post('/logout-all', requireAuth, controller.logoutAll);
 router.get('/me', requireAuth, controller.me);
 router.patch('/me', requireAuth, validate(updateMeSchema), controller.updateMe);
 router.delete('/me', requireAuth, controller.deleteMe);

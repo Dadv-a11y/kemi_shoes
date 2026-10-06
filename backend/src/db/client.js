@@ -38,7 +38,8 @@ const columnNames = {
   actorlabel: 'actorLabel', created_at: 'createdAt', pendingcustomizationscount: 'pendingCustomizationsCount',
   slugfr: 'slugFr', slugen: 'slugEn', namefr: 'nameFr', nameen: 'nameEn', descriptionfr: 'descriptionFr',
   descriptionen: 'descriptionEn', outofstocksizes: 'outOfStockSizes', productname: 'productName',
-  ordercount: 'orderCount', altfr: 'altFr', alten: 'altEn', unitsold: 'unitsSold', revenue: 'revenue', averagebasketfcfa: 'averageBasketFcfa',
+  ordercount: 'orderCount', readat: 'readAt', refreshhash: 'refreshHash', previoushash: 'previousHash', rotatedat: 'rotatedAt',
+  revokedat: 'revokedAt', lastusedat: 'lastUsedAt', imageurl: 'imageUrl', altfr: 'altFr', alten: 'altEn', unitsold: 'unitsSold', revenue: 'revenue', averagebasketfcfa: 'averageBasketFcfa',
 };
 
 function normalizeRow(row) {

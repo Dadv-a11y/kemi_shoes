@@ -48,8 +48,8 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
     setError("");
     try {
       const e164 = fullPhone();
-      await backendRequest("/auth/otp/request", { method: "POST", body: JSON.stringify({ phone: e164 }) });
-      createOtpChallenge(e164, mode, name.trim() || undefined);
+      const { expiresAt } = await backendRequest<{ expiresAt: string }>("/auth/otp/request", { method: "POST", body: JSON.stringify({ phone: e164 }) });
+      createOtpChallenge(e164, mode, name.trim() || undefined, expiresAt);
       router.push(`/${locale}/compte/verification`);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : labels.required);

@@ -27,8 +27,23 @@ export const conflict = (message) => new AppError(message, 409, 'CONFLICT');
  *   en production (évite les fuites d'information — OWASP A05 Security Misconfiguration).
  * - Log systématique côté serveur pour l'observabilité, quel que soit l'environnement.
  */
+// Erreurs PostgreSQL prévisibles traduites en réponses HTTP claires plutôt qu'en 500
+// exposant le nom des contraintes et tables.
+const PG_ERRORS = {
+  '23503': () => conflict('Ressource encore utilisée par d’autres données.'),
+  '23505': () => conflict('Cette ressource existe déjà.'),
+  '22P02': () => badRequest('Identifiant ou valeur invalide.'),
+};
+
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
+  if (!err.isOperational && PG_ERRORS[err.code]) {
+    req.log?.warn({ err }, 'database_constraint_error');
+    err = PG_ERRORS[err.code]();
+  } else if (err.name === 'MulterError') {
+    // Upload refusé (fichier > 5 Mo, champ inattendu…) : erreur client, pas 500.
+    err = badRequest(err.code === 'LIMIT_FILE_SIZE' ? 'Image trop lourde (5 Mo maximum).' : 'Upload invalide.');
+  }
   const statusCode = err.statusCode || 500;
   const isOperational = err.isOperational === true;
 
@@ -37,7 +52,7 @@ export function errorHandler(err, req, res, next) {
 
   const payload = {
     error: {
-      code: err.code || 'INTERNAL_ERROR',
+      code: isOperational ? err.code : 'INTERNAL_ERROR',
       message: isOperational || !isProd ? err.message : 'Une erreur interne est survenue.',
     },
   };

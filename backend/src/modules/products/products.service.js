@@ -21,9 +21,20 @@ async function getRelations(productId) {
   return { images, colors, sizes };
 }
 
+// Les indicateurs sont stockés en INTEGER (0/1) : l'API les expose en booléens,
+// format attendu par le schéma de mise à jour (sinon le back-office, qui renvoie
+// le produit tel que lu, voyait chaque modification refusée en 400).
 async function hydrate(product) {
   if (!product) return null;
-  return { ...product, ...(await getRelations(product.id)) };
+  const { images, colors, sizes } = await getRelations(product.id);
+  return {
+    ...product,
+    colorCustomizable: Boolean(product.colorCustomizable),
+    materialCustomizable: Boolean(product.materialCustomizable),
+    images: images.map((image) => ({ ...image, isMain: Boolean(image.isMain) })),
+    colors,
+    sizes: sizes.map((size) => ({ ...size, available: Boolean(size.available) })),
+  };
 }
 
 /**

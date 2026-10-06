@@ -11,5 +11,8 @@ export default async function CartPage({ params }: { params: Promise<{ locales: 
   const keys = ["title", "emptyTitle", "emptyText", "discover", "clear", "deliveryTo", "destination", "edit", "size", "color", "material", "personalized", "remove", "promo", "promoPlaceholder", "apply", "summary", "subtotal", "delivery", "discount", "total", "totalNote", "checkout", "secure", "returns", "recommendations", "filledPreview", "emptyPreview", "preview"] as const;
   const labels = Object.fromEntries(keys.map((key) => [key, t(`cart.${key}`)])) as Record<(typeof keys)[number], string>;
 
-  return <CartView locale={locale} labels={labels} />;
+  // Libellés de catégorie pour les cards de suggestion (identiques à celles de la boutique).
+  const categoryLabels = Object.fromEntries((["femme", "homme", "nouveautes", "couple-enfant"] as const).map((category) => [category, t(`catalog.categories.${category}`)]));
+
+  return <CartView locale={locale} labels={labels} categoryLabels={categoryLabels} />;
 }

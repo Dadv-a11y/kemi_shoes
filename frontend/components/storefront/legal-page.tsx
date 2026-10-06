@@ -46,6 +46,9 @@ export async function LegalPage({ locale, document }: { locale: Locale; document
   const title = page ? (locale === "en" && page.titleEn ? page.titleEn : page.titleFr) : definition.title[locale];
   const markdown = body ?? (await fs.readFile(path.join(process.cwd(), "public", "legales", definition.file), "utf8"));
   const result = await remark().use(remarkHtml).process(markdown);
+  // Liens internes du Markdown (ex. "/cgv") : préfixés par la locale courante,
+  // sinon le proxy redirige vers la locale par défaut.
+  const html = result.toString().replace(/href="\/(?!fr\/|en\/|fr"|en")/g, `href="/${locale}/`);
 
   return (
     <main className="legal-page">
@@ -54,7 +57,7 @@ export async function LegalPage({ locale, document }: { locale: Locale; document
         <h1>{title}</h1>
         <p>{locale === "fr" ? "Informations officielles et conditions applicables à votre utilisation du site." : "Official information and terms applicable to your use of the website."}</p>
       </header>
-      <article className="legal-content prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: result.toString() }} />
+      <article className="legal-content prose prose-stone max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
     </main>
   );
 }
