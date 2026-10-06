@@ -188,6 +188,11 @@ await audit('admin-edition-produit', '/fr/admin', {
   action: async (page, issues) => {
     await page.getByRole('button', { name: 'Produits' }).first().click();
     await page.waitForTimeout(800);
+    // Tableau paginé (8 lignes) : aller à la page qui contient le produit, filtre « Actifs ».
+    await page.getByRole('button', { name: 'Actifs', exact: true }).click();
+    const targetPage = Math.floor(products.findIndex((p) => p.id === multi.id) / 8) + 1;
+    if (targetPage > 1) await page.getByRole('navigation', { name: 'Pagination' }).getByRole('button', { name: String(targetPage), exact: true }).click();
+    await page.waitForTimeout(300);
     await step(page, 'admin-edition-1-liste-produits');
     await page.locator('tr', { hasText: multi.nameFr }).getByRole('button', { name: 'Éditer' }).click();
     await page.waitForTimeout(800);
@@ -202,6 +207,59 @@ await audit('admin-edition-produit', '/fr/admin', {
   shotName: 'admin-edition-3-apres-publication',
 });
 await audit('admin-refuse-cliente', '/fr/admin', { session: client });
+
+// --- Supervision (rôle DEV) ---
+const dev = await login('dev@test.local', 'Dev1234567');
+const fits = async (page, issues) => {
+  const fit = await page.evaluate(() => {
+    const main = document.querySelector('main');
+    return { page: document.documentElement.scrollHeight - window.innerHeight, main: main ? main.scrollHeight - main.clientHeight : 0 };
+  });
+  if (fit.page > 2 || fit.main > 2) issues.push(`dépasse le viewport : page +${fit.page}px, contenu +${fit.main}px`);
+};
+// Erreur JavaScript réelle dans la boutique : elle doit apparaître dans les logs (source navigateur).
+const browserErrorTag = `ui-audit-browser-error-${Date.now()}`;
+await audit('erreur-navigateur-remontee', '/fr/boutique', {
+  shot: false,
+  action: async (page, issues) => {
+    await page.evaluate((tag) => setTimeout(() => { throw new Error(tag); }, 0), browserErrorTag);
+    await page.waitForTimeout(1500);
+    const found = await fetch(`${API}/monitoring/logs?source=frontend-browser&q=${browserErrorTag}`, { headers: { Cookie: dev } }).then((r) => r.json());
+    if (!found.items?.length) issues.push('erreur navigateur absente des logs');
+    // L'exception provoquée est attendue : on ne la compte pas comme un défaut de la page.
+    issues.splice(0, issues.length, ...issues.filter((issue) => !issue.includes(browserErrorTag)));
+  },
+});
+const supervisionTabs = ['Logs', 'Santé du serveur', "Journal d'audit", 'Fichiers de log'];
+for (const [index, tab] of supervisionTabs.entries()) {
+  await audit(`supervision-${index}-${tab.replace(/[^a-zA-Zéè]+/g, '-').toLowerCase()}`, '/fr/supervision', {
+    session: dev,
+    action: async (page, issues) => {
+      await page.getByRole('button', { name: tab, exact: true }).first().click();
+      await page.waitForTimeout(1500);
+      await fits(page, issues);
+      if (tab === 'Logs' && !(await page.locator('tbody tr').count())) issues.push('aucune entrée de log affichée');
+    },
+  });
+}
+await audit('supervision-detail-entree', '/fr/supervision', {
+  session: dev,
+  action: async (page, issues) => {
+    await page.waitForTimeout(1200);
+    await page.locator('select[aria-label="Niveau minimal"]').selectOption('warn');
+    await page.getByRole('button', { name: 'Rechercher' }).click();
+    await page.waitForTimeout(1200);
+    await page.locator('tbody tr').first().click();
+    await page.waitForTimeout(400);
+    if (!(await page.getByRole('dialog').count())) issues.push('détail de l’entrée non affiché');
+  },
+});
+await audit('supervision-refuse-admin', '/fr/supervision', {
+  session: admin,
+  action: async (page, issues) => {
+    if (!(await page.getByText('Supervision réservée à l’équipe technique').count())) issues.push('un ADMIN accède à la supervision');
+  },
+});
 
 // Fiche produit : nom des suggestions réduit et limité à 2 lignes.
 await audit('produit-suggestions', `/fr/produits/${product.slugFr}`, {

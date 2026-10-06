@@ -15,7 +15,7 @@ import { formatPrice, type Locale } from "@/lib/catalog";
 type Labels = Record<string, string>;
 type Filter = "all" | "inProgress" | "delivered" | "cancelled";
 
-type User = { id: string; name: string | null; email: string | null; phone: string | null; provider: "PASSWORD" | "PHONE_OTP" | "GOOGLE" | "FACEBOOK" };
+type User = { id: string; name: string | null; email: string | null; phone: string | null; role?: string; provider: "PASSWORD" | "PHONE_OTP" | "GOOGLE" | "FACEBOOK" };
 type OrderItem = { id: string; productNameFr: string; quantity: number; size: string; unitPriceFcfa: number; imageUrl?: string | null; slugFr?: string | null; slugEn?: string | null };
 
 /** Vignette d'un article commandé : photo du produit (repli : dégradé), lien vers sa fiche. */
@@ -102,7 +102,7 @@ export function AccountView({ labels, locale = "fr" }: { labels: Labels; locale?
   const filteredOrders = filter === "all" ? orders : orders.filter((order) => orderFilter(order.status) === filter);
   const firstName = user.name?.split(" ")[0];
 
-  return <main className="account-page"><div className="account-shell"><header className="account-hero"><div><span className="eyebrow">KEMI SHOES / {labels.title}</span><h1>{firstName ? `${labels.hello} ${firstName}.` : `${labels.hello}.`}</h1></div><div className="account-avatar"><CircleUserRound aria-hidden="true" /></div></header>
+  return <main className="account-page"><div className="account-shell"><header className="account-hero"><div><span className="eyebrow">KEMI SHOES / {labels.title}</span><h1>{firstName ? `${labels.hello} ${firstName}.` : `${labels.hello}.`}</h1>{/* Accès rapide de l'équipe : back-office ou supervision selon le rôle. */}{user.role === "DEV" ? <Link className="text-link dark-link" href={`/${locale}/supervision`}>Supervision →</Link> : user.role === "ADMIN" || user.role === "PRODUCT_MANAGER" ? <Link className="text-link dark-link" href={`/${locale}/admin`}>Back-office →</Link> : null}</div><div className="account-avatar"><CircleUserRound aria-hidden="true" /></div></header>
     {error && <p className="auth-error">{error}</p>}
     <Tabs value={section} onValueChange={setSection} className="account-tabs"><TabsList variant="line" className="account-tabs-list"><TabsTrigger value="orders">{labels.orders}</TabsTrigger><TabsTrigger value="information">{labels.information}</TabsTrigger></TabsList>
       <TabsContent value="orders" className="account-content"><div className="account-section-heading"><div><span className="section-kicker">02 / 04</span><h2>{labels.orders}</h2></div><span className="account-count">{orders.length} {labels.order}</span></div>

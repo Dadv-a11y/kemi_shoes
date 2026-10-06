@@ -5,7 +5,7 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { audit } from '../../middleware/audit.js';
 
-const roles = z.enum(['CUSTOMER', 'PRODUCT_MANAGER', 'ADMIN']);
+const roles = z.enum(['CUSTOMER', 'PRODUCT_MANAGER', 'ADMIN', 'DEV']);
 
 const listSchema = z.object({
   query: z.object({

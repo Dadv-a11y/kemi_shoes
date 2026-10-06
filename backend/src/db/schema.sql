@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS "User" (
   id            TEXT PRIMARY KEY,
-  role          TEXT NOT NULL DEFAULT 'CUSTOMER' CHECK (role IN ('CUSTOMER','PRODUCT_MANAGER','ADMIN')),
+  role          TEXT NOT NULL DEFAULT 'CUSTOMER' CHECK (role IN ('CUSTOMER','PRODUCT_MANAGER','ADMIN','DEV')),
   name          TEXT,
   email         TEXT UNIQUE,
   emailVerified INTEGER NOT NULL DEFAULT 0,
@@ -235,3 +235,9 @@ CREATE TABLE IF NOT EXISTS Session (
   lastUsedAt    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_session_user ON Session(userId);
+
+-- Rôle DEV (équipe technique : écran de supervision uniquement). La contrainte est
+-- recréée pour les bases existantes (CREATE TABLE IF NOT EXISTS ne la modifie pas).
+ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_role_check";
+ALTER TABLE "User" ADD CONSTRAINT "User_role_check" CHECK (role IN ('CUSTOMER','PRODUCT_MANAGER','ADMIN','DEV'));
+CREATE INDEX IF NOT EXISTS idx_audit_created ON AuditLog(createdAt DESC);

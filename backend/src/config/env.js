@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 
@@ -32,6 +34,8 @@ const envSchema = z.object({
   OTP_MAX_ATTEMPTS: z.coerce.number().default(5),
   // Tentatives de connexion / inscription / OTP par IP et par 15 min.
   AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+  // Demandes de code OTP par IP et par 10 min.
+  OTP_RATE_LIMIT: z.coerce.number().int().positive().default(5),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
@@ -73,13 +77,43 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 
   LOG_LEVEL: z.string().default('info'),
+  // Fichiers de log (voir DEPLOIEMENT.md › Logs et supervision). Chemin absolu
+  // recommandé en mutualisé, hors du dossier public.
+  LOG_DIR: z.string().default('logs'),
+  LOG_TO_FILE: booleanEnv.default(true),
+  LOG_MAX_SIZE: z.string().default('20m'),
+  LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(14),
+  SLOW_REQUEST_MS: z.coerce.number().int().positive().default(1000),
+  // Alertes e-mail sur erreur (vide = e-mails des comptes DEV), regroupées par fenêtre.
+  ALERT_EMAILS: z.string().optional(),
+  ALERT_THROTTLE_MINUTES: z.coerce.number().int().positive().default(15),
+  // Clé partagée avec le serveur Next (Vercel) pour remonter ses erreurs de rendu.
+  LOG_INGEST_KEY: z.preprocess((value) => (value === '' ? undefined : value), z.string().min(16).optional()),
 });
+
+/**
+ * Échec au démarrage : sous Passenger (cPanel), la console n'est pas conservée.
+ * On écrit donc aussi la cause dans LOG_DIR/kemishoes-fatal.log, lu par l'écran
+ * de supervision (le logger applicatif n'existe pas encore à ce stade).
+ */
+function reportStartupFailure(message, details) {
+  const line = JSON.stringify({ level: 'fatal', time: new Date().toISOString(), service: 'kemi-shoes-backend', pid: process.pid, msg: message, details });
+  // eslint-disable-next-line no-console
+  console.error('❌', message, details);
+  try {
+    const dir = path.resolve(process.env.LOG_DIR || 'logs');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, 'kemishoes-fatal.log'), `${line}\n`);
+  } catch {
+    /* disque indisponible : il reste la console */
+  }
+}
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   // eslint-disable-next-line no-console
-  console.error('❌ Configuration invalide :', parsed.error.flatten().fieldErrors);
+  reportStartupFailure('Configuration invalide', parsed.error.flatten().fieldErrors);
   process.exit(1);
 }
 
@@ -100,8 +134,7 @@ if (env.NODE_ENV === 'production') {
 }
 if (env.COOKIE_SAMESITE === 'none' && !env.COOKIE_SECURE) configErrors.push('COOKIE_SAMESITE=none exige COOKIE_SECURE=true.');
 if (configErrors.length) {
-  // eslint-disable-next-line no-console
-  console.error('❌ Configuration invalide :', configErrors);
+  reportStartupFailure('Configuration invalide', configErrors);
   process.exit(1);
 }
 

@@ -1,5 +1,5 @@
-import { logger } from '../config/logger.js';
 import { isProd } from '../config/env.js';
+import { reportAlert } from '../modules/monitoring/alerts.js';
 
 /**
  * Erreur applicative avec code HTTP explicite — permet aux services de lever
@@ -47,13 +47,19 @@ export function errorHandler(err, req, res, next) {
   const statusCode = err.statusCode || 500;
   const isOperational = err.isOperational === true;
 
-  req.log?.error({ err, statusCode }, 'request_error');
-  if (!isOperational) logger.error({ err }, 'unhandled_error');
+  // L'erreur (pile comprise) est jointe à la ligne de journal HTTP de la requête
+  // (pino-http), retrouvable dans la supervision par son identifiant.
+  res.err = err;
+  if (statusCode >= 500) {
+    reportAlert({ title: `${statusCode} ${req.method} ${req.originalUrl?.split('?')[0]}`, message: err.message, requestId: req.id, route: req.route?.path ? `${req.baseUrl}${req.route.path}` : undefined });
+  }
 
   const payload = {
     error: {
       code: isOperational ? err.code : 'INTERNAL_ERROR',
-      message: isOperational || !isProd ? err.message : 'Une erreur interne est survenue.',
+      message: isOperational || !isProd ? err.message : `Une erreur interne est survenue (référence ${req.id}).`,
+      // Référence à communiquer à l'équipe technique : identifiant de la requête dans les logs.
+      requestId: req.id,
     },
   };
   if (!isProd && err.details) payload.error.details = err.details;

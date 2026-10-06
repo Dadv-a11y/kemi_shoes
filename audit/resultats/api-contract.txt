@@ -41,21 +41,21 @@
 ✔ POST   /products                                                  403  (attendu 403) client interdit
 ✔ POST   /products/upload-image                                     201  (attendu 201) 
 ✔ POST   /products                                                  201  (attendu 201) 
-✔ PATCH  /products/6755de5e-d78d-4852-a0a1-bf4e332884bc             200  (attendu 200) 
+✔ PATCH  /products/99f75b44-0294-4aa8-81b3-d0ea8bd8fbf4             200  (attendu 200) 
 ✔ GET    /products/c6ebb20e-bdaa-425d-ba6d-e9ad91619a89             200  (attendu 200) lecture admin
 ✔ PATCH  /products/c6ebb20e-bdaa-425d-ba6d-e9ad91619a89             200  (attendu 200) aller-retour admin (produit tel que lu)
-✔ PATCH  /products/6755de5e-d78d-4852-a0a1-bf4e332884bc/sizes       200  (attendu 200) 
+✔ PATCH  /products/99f75b44-0294-4aa8-81b3-d0ea8bd8fbf4/sizes       200  (attendu 200) 
 ✔ GET    /media?category=brand                                      200  (attendu 200) 
-✔ GET    /uploads/products/c3934d0a-8bd2-4d87-a303-ebf6c5948ce7.png 200  (attendu 200) image uploadée servie
+✔ GET    /uploads/products/9a2dbba1-f8e7-4ddc-a974-2521aef91267.png 200  (attendu 200) image uploadée servie
 ✔ GET    /delivery-zones?activeOnly=true                            200  (attendu 200) 
 ✔ POST   /delivery-zones                                            403  (attendu 403) client interdit
 ✔ POST   /delivery-zones                                            201  (attendu 201) 
-✔ GET    /delivery-zones/a1918f47-2ec8-4006-9e07-54930e241d77       200  (attendu 200) 
-✔ PATCH  /delivery-zones/a1918f47-2ec8-4006-9e07-54930e241d77       200  (attendu 200) 
+✔ GET    /delivery-zones/f011739b-8ffb-4cf1-8a19-ae62993998de       200  (attendu 200) 
+✔ PATCH  /delivery-zones/f011739b-8ffb-4cf1-8a19-ae62993998de       200  (attendu 200) 
 ✔ GET    /addresses                                                 200  (attendu 200) 
 ✔ POST   /addresses                                                 201  (attendu 201) 
-✔ PATCH  /addresses/ac60291d-a20b-4848-9389-bf68ba2976e1            200  (attendu 200) 
-✔ PATCH  /addresses/ac60291d-a20b-4848-9389-bf68ba2976e1            404  (attendu 404) IDOR : adresse d’un autre compte
+✔ PATCH  /addresses/8e3572e9-d66a-4b29-b735-532ea2b9db60            200  (attendu 200) 
+✔ PATCH  /addresses/8e3572e9-d66a-4b29-b735-532ea2b9db60            404  (attendu 404) IDOR : adresse d’un autre compte
 ✔ POST   /orders                                                    201  (attendu 201) 
 ✔ POST   /orders                                                    201  (attendu 201) matière par défaut sur produit non personnalisable
 ✔ POST   /orders                                                    400  (attendu 400) matière personnalisée refusée si non personnalisable
@@ -63,26 +63,26 @@
 ✔ GET    /orders/me?pageSize=50                                     200  (attendu 200) 
 ✔ GET    /orders?pageSize=100                                       200  (attendu 200) 
 ✔ GET    /orders?pageSize=100                                       403  (attendu 403) client interdit
-✔ GET    /orders/4b21e00a-6d44-4373-8689-1d87711a83c2               200  (attendu 200) 
-✔ GET    /orders/4b21e00a-6d44-4373-8689-1d87711a83c2               200  (attendu imageUrl + slugFr) articles de commande avec image produit
-✔ GET    /orders/4b21e00a-6d44-4373-8689-1d87711a83c2               403  (attendu 403) IDOR : commande d’un autre compte
-✔ PATCH  /orders/4b21e00a-6d44-4373-8689-1d87711a83c2/note          200  (attendu 200) 
-✔ PATCH  /orders/4b21e00a-6d44-4373-8689-1d87711a83c2/status        200  (attendu 200) 
-✔ PATCH  /orders/4b21e00a-6d44-4373-8689-1d87711a83c2/status        200  (attendu 200) transition admin
-✔ PATCH  /orders/4b21e00a-6d44-4373-8689-1d87711a83c2/status        200  (attendu 200) transition admin
-✔ PATCH  /orders/4b21e00a-6d44-4373-8689-1d87711a83c2/status        409  (attendu 409) transition interdite SHIPPED → CONFIRMED
-✔ PATCH  /orders/4b21e00a-6d44-4373-8689-1d87711a83c2/status        200  (attendu 200) DELIVERED → notification avis
+✔ GET    /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd               200  (attendu 200) 
+✔ GET    /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd               200  (attendu imageUrl + slugFr) articles de commande avec image produit
+✔ GET    /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd               403  (attendu 403) IDOR : commande d’un autre compte
+✔ PATCH  /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/note          200  (attendu 200) 
+✔ PATCH  /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/status        200  (attendu 200) 
+✔ PATCH  /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/status        200  (attendu 200) transition admin
+✔ PATCH  /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/status        200  (attendu 200) transition admin
+✔ PATCH  /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/status        409  (attendu 409) transition interdite SHIPPED → CONFIRMED
+✔ PATCH  /orders/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/status        200  (attendu 200) DELIVERED → notification avis
 ✔ GET    /payments/providers                                        200  (attendu 200) 
-✔ GET    /payments/4b21e00a-6d44-4373-8689-1d87711a83c2/status      200  (attendu 200) 
-✔ POST   /payments/4b21e00a-6d44-4373-8689-1d87711a83c2/confirm     400  (attendu 200|400|404|409) 
-✔ POST   /payments/4b21e00a-6d44-4373-8689-1d87711a83c2/retry       400  (attendu 200|400|409) 
+✔ GET    /payments/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/status      200  (attendu 200) 
+✔ POST   /payments/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/confirm     400  (attendu 200|400|404|409) 
+✔ POST   /payments/c7a6a181-5fa9-45ab-b245-b34fdc0b4efd/retry       400  (attendu 200|400|409) 
 ✔ POST   /payments/campay/webhook                                   401  (attendu 200|401) webhook sans signature
 ✔ GET    /notifications                                             200  (attendu 200) 
-✔ PATCH  /notifications/1aaa377a-1e22-45dc-832e-9a259a216ae0/read   204  (attendu 204) 
+✔ PATCH  /notifications/495aa76b-90f5-405d-86ef-8105c8f4b0c6/read   204  (attendu 204) 
 ✔ PATCH  /notifications/pas-un-id/read                              204  (attendu 204|400|404) id invalide
 ✔ POST   /reviews                                                   201  (attendu 201) 
 ✔ GET    /reviews?status=pending                                    200  (attendu 200) 
-✔ PATCH  /reviews/13101cbc-8c3d-4239-819a-6da49f963d31/moderate     200  (attendu 200) 
+✔ PATCH  /reviews/c4816182-8451-41ce-8dcb-b35e590312c8/moderate     200  (attendu 200) 
 ✔ GET    /reviews/product/c6ebb20e-bdaa-425d-ba6d-e9ad91619a89      200  (attendu 200) 
 ✔ GET    /reviews/product/c6ebb20e-bdaa-425d-ba6d-e9ad91619a89/summary 200  (attendu 200) 
 ✔ PUT    /content/cgv                                               200  (attendu 200) 
@@ -95,26 +95,50 @@
 ✔ PUT    /settings                                                  403  (attendu 403) client interdit
 ✔ GET    /users?role=CUSTOMER&pageSize=100                          200  (attendu 200) 
 ✔ GET    /users?role=CUSTOMER&pageSize=100                          200  (attendu 200) 
-✔ PATCH  /users/5d17986b-02ef-4b1b-a69b-24764f0a083a/role           200  (attendu 200) 
+✔ PATCH  /users/e87e0b81-a062-4aa6-88f5-48275159288a/role           200  (attendu 200) 
 ✔ GET    /auth/me                                                   401  (attendu 401) changement de rôle : sessions révoquées
 ✔ POST   /auth/login                                                200  (attendu 200) reconnexion avec le nouveau rôle
 ✔ GET    /products?pageSize=1                                       200  (attendu 200) nouveau rôle actif
 ✔ PATCH  /users/626ce614-8a57-401f-9683-c791de142388/role           400  (attendu 400|403) admin ne peut pas se rétrograder
-✔ GET    /dashboard/kpis?from=2026-09-06T13%3A50%3A07.369Z&to=2026-10-06T13%3A50%3A07.369Z 200  (attendu 200) 
-✔ GET    /dashboard/top-products?from=2026-09-06T13%3A50%3A07.369Z&to=2026-10-06T13%3A50%3A07.369Z 200  (attendu 200) 
+✔ GET    /dashboard/kpis?from=2026-09-06T18%3A22%3A59.595Z&to=2026-10-06T18%3A22%3A59.595Z 200  (attendu 200) 
+✔ GET    /dashboard/top-products?from=2026-09-06T18%3A22%3A59.595Z&to=2026-10-06T18%3A22%3A59.595Z 200  (attendu 200) 
 ✔ GET    /dashboard/alerts                                          200  (attendu 200) 
 ✔ GET    /dashboard/alerts                                          403  (attendu 403) client interdit
-✔ DELETE /addresses/ac60291d-a20b-4848-9389-bf68ba2976e1            204  (attendu 204) 
-✔ DELETE /products/6755de5e-d78d-4852-a0a1-bf4e332884bc             409  (attendu 409) produit présent dans une commande
-✔ PATCH  /products/6755de5e-d78d-4852-a0a1-bf4e332884bc             200  (attendu 200) retrait du catalogue à la place
-✔ DELETE /delivery-zones/a1918f47-2ec8-4006-9e07-54930e241d77       409  (attendu 409) zone utilisée par une commande
-✔ PATCH  /delivery-zones/a1918f47-2ec8-4006-9e07-54930e241d77       200  (attendu 200) désactivation à la place
+✔ DELETE /addresses/8e3572e9-d66a-4b29-b735-532ea2b9db60            204  (attendu 204) 
+✔ DELETE /products/99f75b44-0294-4aa8-81b3-d0ea8bd8fbf4             409  (attendu 409) produit présent dans une commande
+✔ PATCH  /products/99f75b44-0294-4aa8-81b3-d0ea8bd8fbf4             200  (attendu 200) retrait du catalogue à la place
+✔ DELETE /delivery-zones/f011739b-8ffb-4cf1-8a19-ae62993998de       409  (attendu 409) zone utilisée par une commande
+✔ PATCH  /delivery-zones/f011739b-8ffb-4cf1-8a19-ae62993998de       200  (attendu 200) désactivation à la place
 ✔ POST   /delivery-zones                                            201  (attendu 201) 
-✔ DELETE /delivery-zones/70038655-c0d4-465b-bbe7-b9a42f6076ce       204  (attendu 204) zone inutilisée
+✔ DELETE /delivery-zones/220c8fa1-898f-41cb-9e97-3f80136873e2       204  (attendu 204) zone inutilisée
 ✔ DELETE /auth/me                                                   204  (attendu 204) 
+✔ POST   /auth/register                                             409  (attendu 201|409) compte DEV
+✔ GET    /users?pageSize=100                                        200  (attendu 200) recherche du compte DEV
+✔ POST   /auth/login                                                200  (attendu 200) connexion DEV
+✔ POST   /monitoring/client-errors                                  204  (attendu 204) 
+✔ POST   /monitoring/client-errors                                  400  (attendu 400) rapport invalide
+✔ GET    /monitoring/logs?source=frontend-server&q=next-render-error-1791310980026 200  (attendu 200) erreur serveur Next
+✔ POST   /monitoring/client-errors                                  204  (attendu source frontend-server) clé d’ingestion Next
+✔ GET    /monitoring/logs                                           401  (attendu 401) invité
+✔ GET    /monitoring/logs                                           403  (attendu 403) ADMIN refusé
+✔ GET    /monitoring/logs                                           403  (attendu 403) client refusé
+✔ GET    /monitoring/logs?limit=50&source=frontend-browser&q=audit%20e2e 200  (attendu 200) 
+✔ GET    /monitoring/logs                                           200  (attendu erreur frontend retrouvée) remontée navigateur visible
+✔ GET    /products/slug/…                                           404  (attendu requestId en en-tête et dans le corps) référence d’erreur
+✔ GET    /monitoring/logs?requestId=a9cae049-09e2-4305-9e49-8374c11ecc40 200  (attendu 200) recherche par référence
+✔ GET    /monitoring/logs?requestId=…                               200  (attendu ligne de la requête 404) traçabilité par référence
+✔ GET    /monitoring/logs/files                                     200  (attendu 200) 
+✔ GET    /monitoring/logs/files/:name                               200  (attendu 200 + NDJSON) téléchargement
+✔ GET    /monitoring/logs/files/..%2F..%2F.env                      404  (attendu 404) traversée de chemin refusée
+✔ DELETE /monitoring/logs/files/kemishoes.2026-10-06.1.log          404  (attendu 404) fichier en cours protégé
+✔ POST   /monitoring/logs/purge                                     200  (attendu 200) 
+✔ GET    /monitoring/health                                         200  (attendu 200) 
+✔ GET    /monitoring/health                                         200  (attendu base OK + trafic mesuré) santé
+✔ GET    /monitoring/audit?action=user.&pageSize=5                  200  (attendu 200) 
+✔ GET    /monitoring/audit                                          200  (attendu actions user.* uniquement) filtre audit
 ✔ GET    /health                                                    200  (attendu 200) /health public
 ✔ GET    /metrics                                                   401  (attendu 401) /metrics sans token
 ✔ GET    /metrics                                                   403  (attendu 403) /metrics client
 ✔ GET    /metrics                                                   200  (attendu 200) /metrics admin
 
-118/118 vérifications OK — 62 routes couvertes
+142/142 vérifications OK — 70 routes couvertes

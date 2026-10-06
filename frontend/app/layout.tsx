@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppChrome } from "@/components/app-chrome";
+import { ClientErrorReporter } from "@/components/monitoring/client-error-reporter";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="fr" className={`${archivo.variable} ${fraunces.variable} h-full antialiased`}>
       <head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" /></head>
       <body className="min-h-full">
+        <ClientErrorReporter />
         <TooltipProvider>
           <AppChrome>{children}</AppChrome>
         </TooltipProvider>

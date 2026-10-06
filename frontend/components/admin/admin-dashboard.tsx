@@ -80,13 +80,13 @@ type ApiOrder = {
 type AdminOrder = { uuid: string; id: string; client: string; date: string; zone: string; status: OrderStatus; rawStatus: string; total: string };
 type AdminReview = { id: string; productId: string; rating: number; comment: string; createdAt: string; status: string };
 type ContentPage = { id: string; slug: string; titleFr: string; titleEn?: string | null; bodyFr: string; bodyEn?: string | null };
-type UserRole = "CUSTOMER" | "PRODUCT_MANAGER" | "ADMIN";
+type UserRole = "CUSTOMER" | "PRODUCT_MANAGER" | "ADMIN" | "DEV";
 type AdminUser = { id: string; name: string | null; email: string | null; phone: string | null; role: UserRole; provider: string; createdAt: string; orderCount: number; lastOrderAt: string | null };
 type PaymentProvider = { id: string; name: string; description: string; status: "live" | "demo" | "not_configured"; methods: string[]; webhookConfigured?: boolean; maxAmountXaf?: number | null };
 type StoreSettings = { storeName: string; phone: string; whatsapp: string; email: string; address: string; instagram: string; facebook: string };
 
 const providerLabels: Record<string, string> = { GOOGLE: "Google", FACEBOOK: "Facebook", PHONE_OTP: "Téléphone", PASSWORD: "Email" };
-const roleLabels: Record<UserRole, string> = { ADMIN: "Administrateur", PRODUCT_MANAGER: "Gestionnaire produit", CUSTOMER: "Client" };
+const roleLabels: Record<UserRole, string> = { ADMIN: "Administrateur", PRODUCT_MANAGER: "Gestionnaire produit", DEV: "Équipe technique (supervision)", CUSTOMER: "Client" };
 const paymentMethodLabels: Record<string, string> = { mobile_money: "Mobile Money", card: "Carte", cod: "COD" };
 const providerStatusLabels: Record<PaymentProvider["status"], string> = { live: "Connecté", demo: "Mode test (demo)", not_configured: "Non configuré" };
 
@@ -230,7 +230,8 @@ function AdminDashboardContent() {
     Promise.all([
       backendRequest<{ items: AdminUser[] }>("/users?role=ADMIN"),
       backendRequest<{ items: AdminUser[] }>("/users?role=PRODUCT_MANAGER"),
-    ]).then(([admins, managers]) => setStaffUsers([...admins.items, ...managers.items])).catch(() => undefined);
+      backendRequest<{ items: AdminUser[] }>("/users?role=DEV"),
+    ]).then(([admins, managers, devs]) => setStaffUsers([...admins.items, ...managers.items, ...devs.items])).catch(() => undefined);
     backendRequest<PaymentProvider[]>("/payments/providers").then(setPaymentProviders).catch(() => undefined);
     backendRequest<StoreSettings>("/settings").then(setStoreSettings).catch(() => undefined);
   }, []);
@@ -388,7 +389,7 @@ function AdminDashboardContent() {
   const zonesPage = usePagination(deliveryZones);
   const paymentZonesPage = usePagination(deliveryZones);
   const reviewsPage = usePagination(adminReviews, 5);
-  const staffPage = usePagination(staffUsers, 5);
+  const staffPage = usePagination(staffUsers, 4);
 
   const updateSelectedProduct = <K extends keyof Product>(
     field: K,
@@ -1908,7 +1909,9 @@ function AdminDashboardContent() {
             </div>
           </div>
 
-          <div className="mb-2">
+          {/* Utilisateurs et langue côte à côte sur grand écran : la page tient dans le viewport. */}
+          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="min-w-0">
             <h3 className="mb-3 text-[14px] font-semibold">
               Utilisateurs &amp; rôles
             </h3>
@@ -1971,6 +1974,7 @@ function AdminDashboardContent() {
                 </textarea>
               </div>
             </div>
+          </div>
           </div>
         </div>
       );

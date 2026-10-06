@@ -35,7 +35,7 @@ const columnNames = {
   totalfcfa: 'totalFcfa', orderid: 'orderId', productnamefr: 'productNameFr', unitpricefcfa: 'unitPriceFcfa',
   customcolor: 'customColor', custommaterial: 'customMaterial', titlefr: 'titleFr', titleen: 'titleEn',
   bodyfr: 'bodyFr', bodyen: 'bodyEn', entityid: 'entityId', entitytype: 'entityType', actorid: 'actorId',
-  actorlabel: 'actorLabel', created_at: 'createdAt', pendingcustomizationscount: 'pendingCustomizationsCount',
+  actorlabel: 'actorLabel', actoremail: 'actorEmail', actorname: 'actorName', created_at: 'createdAt', pendingcustomizationscount: 'pendingCustomizationsCount',
   slugfr: 'slugFr', slugen: 'slugEn', namefr: 'nameFr', nameen: 'nameEn', descriptionfr: 'descriptionFr',
   descriptionen: 'descriptionEn', outofstocksizes: 'outOfStockSizes', productname: 'productName',
   ordercount: 'orderCount', readat: 'readAt', refreshhash: 'refreshHash', previoushash: 'previousHash', rotatedat: 'rotatedAt',

@@ -24,7 +24,7 @@ export const authLimiter = rateLimit({
  */
 export const otpRequestLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  limit: 5,
+  limit: env.OTP_RATE_LIMIT, // 5 par défaut
   standardHeaders: true,
   legacyHeaders: false,
   skip,
