@@ -214,6 +214,48 @@ const spare = await call('POST', '/delivery-zones', { token: A, expect: 201, bod
 await call('DELETE', `/delivery-zones/${spare.data.id}`, { token: A, expect: 204, label: 'zone inutilisée' });
 await call('DELETE', '/auth/me', { token: E, expect: 204 }); route('DELETE /auth/me');
 
+// --- supervision (rôle DEV) ---
+// Compte de l'équipe technique : créé au besoin, puis rôle DEV attribué par l'admin.
+await call('POST', '/auth/register', { body: { name: 'Dev Test', email: 'dev@test.local', password: 'Dev1234567' }, expect: [201, 409], label: 'compte DEV' });
+const devUser = (await call('GET', '/users?pageSize=100', { token: A, label: 'recherche du compte DEV' })).data.items.find((u) => u.email === 'dev@test.local');
+if (devUser.role !== 'DEV') await call('PATCH', `/users/${devUser.id}/role`, { token: A, body: { role: 'DEV' }, label: 'attribution du rôle DEV' });
+const D = await login('dev@test.local', 'Dev1234567', 'connexion DEV');
+const ingest = await call('POST', '/monitoring/client-errors', { body: { message: 'TypeError: audit e2e', url: '/fr/panier', kind: 'error' }, expect: 204 }); route('POST /monitoring/client-errors');
+await call('POST', '/monitoring/client-errors', { body: {}, expect: 400, label: 'rapport invalide' });
+// Serveur Next (Vercel) authentifié par LOG_INGEST_KEY → source « frontend-server ».
+if (process.env.LOG_INGEST_KEY) {
+  const nextError = `next-render-error-${Date.now()}`;
+  const res = await fetch(`${API}/monitoring/client-errors`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Log-Ingest-Key': process.env.LOG_INGEST_KEY }, body: JSON.stringify({ message: nextError, kind: 'server', route: '/[locales]/produits/[slug] (render)', method: 'GET' }) });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const serverLogs = await call('GET', `/monitoring/logs?source=frontend-server&q=${nextError}`, { token: D, label: 'erreur serveur Next' });
+  results.push({ ok: res.status === 204 && serverLogs.data?.items?.length === 1, method: 'POST', path: '/monitoring/client-errors', status: res.status, expected: 'source frontend-server', label: 'clé d’ingestion Next', detail: '' });
+}
+for (const [token, expected, label] of [[undefined, 401, 'invité'], [A, 403, 'ADMIN refusé'], [C, 403, 'client refusé']]) {
+  await call('GET', '/monitoring/logs', { token, expect: expected, label });
+}
+const logs = await call('GET', '/monitoring/logs?limit=50&source=frontend-browser&q=audit%20e2e', { token: D }); route('GET /monitoring/logs');
+results.push({ ok: logs.data?.items?.some((e) => e.msg?.includes('audit e2e')), method: 'GET', path: '/monitoring/logs', status: logs.status, expected: 'erreur frontend retrouvée', label: 'remontée navigateur visible', detail: JSON.stringify(logs.data?.items?.[0])?.slice(0, 200) });
+// Toute réponse d'erreur porte sa référence (X-Request-Id + corps) ; la ligne de log la retrouve.
+const failing = await fetch(`${API}/products/slug/introuvable-${Date.now()}`);
+const failingBody = await failing.json();
+const reference = failing.headers.get('x-request-id');
+results.push({ ok: Boolean(reference) && failingBody.error?.requestId === reference, method: 'GET', path: '/products/slug/…', status: failing.status, expected: 'requestId en en-tête et dans le corps', label: 'référence d’erreur', detail: JSON.stringify(failingBody) });
+await new Promise((resolve) => setTimeout(resolve, 300)); // écriture asynchrone du fichier de log
+const traced = await call('GET', `/monitoring/logs?requestId=${reference}`, { token: D, label: 'recherche par référence' });
+results.push({ ok: traced.data?.items?.[0]?.res?.statusCode === 404, method: 'GET', path: '/monitoring/logs?requestId=…', status: traced.status, expected: 'ligne de la requête 404', label: 'traçabilité par référence', detail: JSON.stringify(traced.data?.items?.[0])?.slice(0, 200) });
+const files = await call('GET', '/monitoring/logs/files', { token: D }); route('GET /monitoring/logs/files');
+const current = files.data?.current;
+const download = await fetch(`${API}/monitoring/logs/files/${encodeURIComponent(current)}`, { headers: { Cookie: D } });
+results.push({ ok: download.status === 200 && (await download.text()).includes('"level"'), method: 'GET', path: '/monitoring/logs/files/:name', status: download.status, expected: '200 + NDJSON', label: 'téléchargement', detail: '' }); route('GET /monitoring/logs/files/:name');
+await call('GET', `/monitoring/logs/files/${encodeURIComponent('../../.env')}`, { token: D, expect: 404, label: 'traversée de chemin refusée' });
+await call('DELETE', `/monitoring/logs/files/${encodeURIComponent(current)}`, { token: D, expect: 404, label: 'fichier en cours protégé' }); route('DELETE /monitoring/logs/files/:name');
+await call('POST', '/monitoring/logs/purge', { token: D, body: { olderThanDays: 365 } }); route('POST /monitoring/logs/purge');
+const health = await call('GET', '/monitoring/health', { token: D }); route('GET /monitoring/health');
+results.push({ ok: health.data?.database?.ok === true && health.data?.requests?.last60?.requests > 0, method: 'GET', path: '/monitoring/health', status: health.status, expected: 'base OK + trafic mesuré', label: 'santé', detail: JSON.stringify(health.data?.database) });
+const auditLog = await call('GET', '/monitoring/audit?action=user.&pageSize=5', { token: D }); route('GET /monitoring/audit');
+results.push({ ok: auditLog.data?.items?.every((item) => item.action.startsWith('user.')), method: 'GET', path: '/monitoring/audit', status: auditLog.status, expected: 'actions user.* uniquement', label: 'filtre audit', detail: '' });
+void ingest;
+
 // --- santé / métriques (réservées aux administrateurs) ---
 for (const [label, token, expected] of [['/health public', undefined, 200], ['/metrics sans token', undefined, 401], ['/metrics client', C, 403], ['/metrics admin', A, 200]]) {
   const path = label.split(' ')[0];

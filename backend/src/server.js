@@ -4,10 +4,12 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import pinoHttp from "pino-http";
 import path from "node:path";
 import { env } from "./config/env.js";
-import { logger } from "./config/logger.js";
+import { logger, logFatalSync } from "./config/logger.js";
+import { httpLogger, requestStatsMiddleware } from "./modules/monitoring/httpLogger.js";
+import { scheduleLogMaintenance } from "./modules/monitoring/logMaintenance.js";
+import { reportAlert } from "./modules/monitoring/alerts.js";
 import { openDb } from "./db/client.js";
 import { metricsMiddleware, register } from "./config/metrics.js";
 import authRoutes from "./modules/auth/auth.route.js";
@@ -23,6 +25,7 @@ import addressesRoutes from "./modules/addresses/addresses.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
 import mediaRoutes from "./modules/media/media.routes.js";
+import monitoringRoutes from "./modules/monitoring/monitoring.routes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { requireAuth, requireRole, requireTrustedOrigin } from "./middleware/auth.js";
 
@@ -32,6 +35,9 @@ const allowedOrigins = env.CORS_ORIGINS.split(",")
   .filter(Boolean);
 
 app.set("trust proxy", 1);
+// En premier : identifiant de requête et journal HTTP couvrent aussi CORS et parsing.
+app.use(httpLogger);
+app.use(requestStatsMiddleware);
 // cross-origin : les images /uploads sont affichées par le frontend (autre domaine).
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: allowedOrigins, credentials: true }));
@@ -40,7 +46,6 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(requireTrustedOrigin(allowedOrigins));
-app.use(pinoHttp({ logger }));
 app.use(metricsMiddleware);
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
@@ -63,20 +68,40 @@ app.use("/api/v1/addresses", addressesRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/settings", settingsRoutes);
 app.use("/api/v1/media", mediaRoutes);
+app.use("/api/v1/monitoring", monitoringRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 export { app };
 
 if (process.env.NODE_ENV !== "test") {
+  // Plantages : écrits de façon synchrone dans logs/kemishoes-fatal.log (visible dans
+  // la supervision même si Passenger ne conserve pas la console), puis arrêt.
+  process.on("uncaughtException", (error) => {
+    logFatalSync("uncaught_exception", error);
+    process.exit(1);
+  });
+  // Promesse rejetée sans gestionnaire : erreur journalisée et alertée, sans arrêter le serveur.
+  process.on("unhandledRejection", (reason) => {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error({ err: error, source: "backend" }, "unhandled_rejection");
+    reportAlert({ title: "Promesse rejetée non gérée", message: error.message });
+  });
+  process.on("SIGTERM", () => {
+    logger.info("server_stopping");
+    logger.flush?.();
+    setTimeout(() => process.exit(0), 200).unref();
+  });
+
   openDb()
     .then(() =>
-      app.listen(env.PORT, () =>
-        logger.info({ port: env.PORT }, "server_started"),
-      ),
+      app.listen(env.PORT, () => {
+        logger.info({ port: env.PORT, node: process.version, env: env.NODE_ENV }, "server_started");
+        scheduleLogMaintenance();
+      }),
     )
     .catch((error) => {
-      logger.fatal({ err: error }, "database_initialisation_failed");
+      logFatalSync("database_initialisation_failed", error);
       process.exit(1);
     });
 }

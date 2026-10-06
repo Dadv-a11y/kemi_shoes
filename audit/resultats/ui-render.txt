@@ -48,6 +48,13 @@
 ✔ admin-8-paramètres               200  /fr/admin  « Paramètres »
 ✔ admin-edition-produit            200  /fr/admin  « Produits »
 ✔ admin-refuse-cliente             200  /fr/admin  « Accès réservé à l’équipe KEMI SHOES »
+✔ erreur-navigateur-remontee       200  /fr/boutique  « Toutes les sandales »
+✔ supervision-0-logs               200  /fr/supervision  « Logs »
+✔ supervision-1-santé-du-serveur   200  /fr/supervision  « Santé du serveur »
+✔ supervision-2-journal-d-audit    200  /fr/supervision  « Journal d'audit »
+✔ supervision-3-fichiers-de-log    200  /fr/supervision  « Fichiers de log »
+✔ supervision-detail-entree        200  /fr/supervision  « Logs »
+✔ supervision-refuse-admin         200  /fr/supervision  « Supervision réservée à l’équipe technique »
 ✔ produit-suggestions              200  /fr/produits/sandales-a-bague-d-orteil  « Sandales à bague d’orteil »
 ✔ otp-1-compte-a-rebours           200  /fr/compte/verification  « Vérification »
 ✔ otp-ignorer-bandeau              200  /fr/boutique  « Toutes les sandales »
@@ -55,5 +62,5 @@
 ✔ connexion-sans-sms               200  /fr/compte/connexion  «  »
 ✔ deconnexion                      200  /fr/compte/connexion  «  »
 
-Commande passée depuis l'UI : Commande KS-10026
-56/56 vues sans erreur
+Commande passée depuis l'UI : Commande KS-10038
+63/63 vues sans erreur

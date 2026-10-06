@@ -49,8 +49,13 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
   const verify = async () => {
     if (code.length !== 6 || !challenge || remaining === 0) return;
     try {
-      await backendRequest("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone: challenge.phone, code, name: challenge.name }) });
+      const { user } = await backendRequest<{ user: { role: string } }>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone: challenge.phone, code, name: challenge.name }) });
       onSignedIn();
+      if (user.role === "DEV") {
+        clearOtpChallenge();
+        router.push(`/${locale}/supervision`);
+        return;
+      }
       clearOtpChallenge();
       router.push(`/${locale}/boutique`);
     } catch (verifyError) {

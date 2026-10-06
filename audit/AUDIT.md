@@ -23,9 +23,9 @@ Résultats bruts : `audit/resultats/`. Le script de rendu écrit une capture de 
 
 | Étape | Avant correctifs | Après |
 |---|---|---|
-| Tests backend | 47/93 (mot de passe de la base de test codé en dur) | **115/115** |
-| Contrat API | 77/83 | **118/118** (62 routes) |
-| Rendu des vues | 22/49, aucune commande possible | **56/56**, commande passée depuis l'UI |
+| Tests backend | 47/93 (mot de passe de la base de test codé en dur) | **126/126** |
+| Contrat API | 77/83 | **142/142** (70 routes) |
+| Rendu des vues | 22/49, aucune commande possible | **63/63**, commande passée depuis l'UI |
 | `npm audit --omit=dev` (frontend) | 1 critique, plusieurs élevées | **0** |
 | Lint frontend | 1 erreur | 0 erreur (1 avertissement) |
 
@@ -123,6 +123,23 @@ Tests ajoutés : `errorHandler.test.js`, suppression de zone référencée, alle
 | 35 | Numéro masqué erroné sur la page OTP | `+237 2XX…` : le « 2 » de l'indicatif était pris pour le premier chiffre → `+237 6XX XXX X48` |
 | 36 | Code mort | Faux JWT `kemi-session` (signature aléatoire, jamais posé) et sa lecture dans `proxy.ts` supprimés |
 | 37 | Redirection forcée vers la vérification OTP | `proxy.ts` renvoyait l'accueil vers la page de vérification pendant toute la validité du code (5 min). Remplacé par un bandeau non bloquant sur toute la boutique : « Saisir le code » ou « Ignorer » (efface le rappel) ; il disparaît à l'expiration du code |
+
+### Quatrième lot : logs et supervision
+
+Constat de départ : en production (cPanel + Vercel), des erreurs 500 sans détail ni trace. Pino écrivait
+seulement dans la console, que Passenger ne conserve pas ; l'API répondait « Une erreur interne est survenue »
+sans référence.
+
+| # | Mise en œuvre |
+|---|---|
+| 38 | **Logs fichier** : Pino → `LOG_DIR/kemishoes.<date>.<n>.log` (pino-roll, quotidien ou 20 Mo), JSON compatible Grafana Loki ; compression et suppression après 14 jours par une maintenance intégrée (sans cron) ; secrets masqués (cookies, jetons, mots de passe, paramètres OAuth) |
+| 39 | **Référence de requête** : identifiant sur chaque requête (`X-Request-Id`, repris du client s'il est valide), présent dans toutes les lignes et dans chaque réponse d'erreur (« référence 7f3a… ») ; journal HTTP monté en premier (couvre aussi CORS et parsing), niveau error ≥ 500 / warn ≥ 400, requêtes lentes signalées, images servies avec succès non journalisées |
+| 40 | **Plantages** : configuration invalide, base injoignable et exceptions non gérées écrits de façon synchrone dans `kemishoes-fatal.log` ; promesses rejetées journalisées sans arrêter le serveur |
+| 41 | **Rôle DEV** : contrainte de rôle migrée, attribution par l'admin ou `npm run user:set-role`, accès à la seule supervision (l'admin n'y a pas accès, le DEV n'a pas accès au back-office), redirection après connexion |
+| 42 | **Écran Supervision** (`/fr/supervision`) : logs (niveau, source, période, statut, lenteur, texte, référence ; suivi en direct ; détail avec pile d'appels), santé (disponibilité, base, trafic et erreurs sur 15/60 min, mémoire, fichiers, intégrations, histogramme par minute avec vue tableau), journal d'audit filtrable et paginé, fichiers (téléchargement, suppression, purge ; fichier courant protégé, aucune traversée de chemin) |
+| 43 | **Erreurs du frontend** : erreurs JavaScript des visiteurs et erreurs de rendu (error boundaries) envoyées au backend (route publique limitée à 20/min par IP), erreurs du serveur Next via `instrumentation.ts` authentifiées par `LOG_INGEST_KEY` |
+| 44 | **Alertes e-mail** : première erreur 500 (ou erreur du serveur Next) envoyée immédiatement, les suivantes regroupées au plus toutes les 15 min, aux adresses `ALERT_EMAILS` ou aux comptes DEV |
+| 45 | Correctifs : l'audit des connexions enregistrait « guest » au lieu de l'utilisateur ; une écriture d'audit en échec devenait une promesse rejetée non gérée |
 
 ## 5. Constats non corrigés (à arbitrer)
 

@@ -11,13 +11,13 @@ function respondWithSession(res, { accessToken, refreshToken, user }, status = 2
 
 export async function register(req, res) {
   const result = await authService.registerWithPassword(req.body);
-  audit(req, { action: 'auth.register', entityType: 'User', entityId: result.user.id });
+  audit(req, { action: 'auth.register', entityType: 'User', entityId: result.user.id, actor: result.user });
   respondWithSession(res, result, 201);
 }
 
 export async function login(req, res) {
   const result = await authService.loginWithPassword(req.body);
-  audit(req, { action: 'auth.login', entityType: 'User', entityId: result.user.id });
+  audit(req, { action: 'auth.login', entityType: 'User', entityId: result.user.id, actor: result.user });
   respondWithSession(res, result);
 }
 
@@ -29,7 +29,7 @@ export async function requestOtp(req, res) {
 
 export async function verifyOtp(req, res) {
   const result = await authService.verifyPhoneOtpAndAuthenticate(req.body);
-  audit(req, { action: 'auth.otp_login', entityType: 'User', entityId: result.user.id });
+  audit(req, { action: 'auth.otp_login', entityType: 'User', entityId: result.user.id, actor: result.user });
   respondWithSession(res, result);
 }
 

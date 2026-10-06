@@ -64,9 +64,10 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
     if (mode === "signup" && !name.trim()) return setError(labels.required);
     setError("");
     try {
-      await backendRequest(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", body: JSON.stringify(mode === "login" ? { email, password } : { name: name.trim(), email, password }) });
+      const { user } = await backendRequest<{ user: { role: string } }>(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", body: JSON.stringify(mode === "login" ? { email, password } : { name: name.trim(), email, password }) });
       onSignedIn();
-      router.push(`/${locale}/compte`);
+      // L'équipe technique arrive directement sur la supervision.
+      router.push(user.role === "DEV" ? `/${locale}/supervision` : `/${locale}/compte`);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : labels.required);
     }

@@ -332,7 +332,75 @@ est configuré (`GET /auth/providers`).
 
 ---
 
-## 7. Mise à jour de l'application
+## 7. Logs et supervision
+
+### 7.1 Principe
+
+| Élément | Où | Rôle |
+|---|---|---|
+| **Pino** | backend | Une ligne JSON par événement : requêtes HTTP (méthode, route, statut, durée, utilisateur), erreurs avec pile d'appels, requêtes lentes, démarrage/arrêt, audit |
+| **pino-roll** | backend | Écrit dans `LOG_DIR/kemishoes.<date>.<n>.log` : nouveau fichier chaque jour ou au-delà de `LOG_MAX_SIZE` |
+| Maintenance intégrée | backend | Au démarrage puis toutes les 6 h : compression `.gz` des fichiers passés, suppression au-delà de `LOG_RETENTION_DAYS` (14 j). Aucun cron requis |
+| `kemishoes-fatal.log` | backend | Plantages écrits de façon synchrone (configuration invalide, base injoignable, exception non gérée) : visibles même si le processus s'arrête aussitôt |
+| Écran **Supervision** | `/fr/supervision` | Réservé au rôle **DEV** : logs (filtres, recherche par référence, suivi en direct, détail avec pile d'appels), santé du serveur, journal d'audit, fichiers (téléchargement, purge) |
+| Alertes e-mail | backend | Première erreur 500 envoyée tout de suite, les suivantes regroupées au plus toutes les `ALERT_THROTTLE_MINUTES` |
+| Erreurs du frontend | Vercel + navigateurs | Erreurs JavaScript des visiteurs (source « Navigateur ») et erreurs de rendu du serveur Next (source « Serveur Next », via `instrumentation.ts`) remontées dans les mêmes logs |
+
+Chaque réponse de l'API porte un en-tête `X-Request-Id` ; une erreur 500 affiche
+« Une erreur interne est survenue (référence 7f3a…) ». Saisir cette référence dans
+**Supervision › Logs › Référence** affiche toute la trace de la requête.
+
+### 7.2 Variables
+
+| Variable | Défaut | Description |
+|---|---|---|
+| `LOG_DIR` | `logs` (dans le dossier de l'application) | **Chemin absolu recommandé, hors de `public_html`**, ex. `/home/<compte>/kemishoes-logs` |
+| `LOG_LEVEL` | `info` | `debug` pour un diagnostic ponctuel |
+| `LOG_TO_FILE` | `true` | `false` pour n'écrire qu'en console |
+| `LOG_MAX_SIZE` / `LOG_RETENTION_DAYS` | `20m` / `14` | Taille maximale d'un fichier, conservation |
+| `SLOW_REQUEST_MS` | `1000` | Seuil des requêtes lentes |
+| `ALERT_EMAILS` | vide | Destinataires des alertes, séparés par des virgules (vide = e-mails des comptes DEV). Nécessite le SMTP |
+| `ALERT_THROTTLE_MINUTES` | `15` | Fenêtre de regroupement des alertes |
+| `LOG_INGEST_KEY` | vide | Secret partagé (≥ 16 caractères) avec le frontend pour remonter les erreurs du serveur Next. **Même valeur côté Vercel** (`LOG_INGEST_KEY`, variable serveur, sans `NEXT_PUBLIC_`) |
+
+### 7.3 Hébergement mutualisé (cPanel « Setup Node.js App »)
+
+- Passenger ne conserve pas la sortie console : les fichiers de `LOG_DIR` sont la source de vérité.
+- Créez le dossier (`mkdir -p ~/kemishoes-logs`) et renseignez `LOG_DIR` dans les variables de l'application cPanel.
+- Gardez **une seule instance** de l'application (réglage par défaut) : plusieurs processus écriraient en même temps dans le même fichier.
+- En cas d'échec au démarrage (page Passenger « Web application could not be started »), lisez `kemishoes-fatal.log`
+  via le gestionnaire de fichiers cPanel, ou le `stderr.log` de l'application.
+
+### 7.4 Accès de l'équipe technique
+
+```bash
+# le compte doit d'abord être créé depuis le site, puis :
+npm run user:set-role -- dev@exemple.com DEV
+```
+
+Un administrateur peut aussi attribuer le rôle depuis **Admin › Paramètres › Utilisateurs & rôles**.
+À la connexion, un compte DEV arrive directement sur `/fr/supervision` (il n'a pas accès au back-office,
+et un administrateur n'a pas accès à la supervision).
+
+### 7.5 Plus tard sur un VPS : Grafana + Loki
+
+Les logs sont déjà au format attendu par Loki. Il suffit d'ajouter Promtail, qui lit les mêmes fichiers :
+
+```yaml
+# promtail.yml
+scrape_configs:
+  - job_name: kemishoes
+    static_configs:
+      - targets: [localhost]
+        labels: { job: kemishoes, __path__: /home/<compte>/kemishoes-logs/kemishoes*.log }
+    pipeline_stages:
+      - json: { expressions: { level: level, source: source, requestId: requestId } }
+      - labels: { level: , source: }
+```
+
+L'écran Supervision reste utilisable en parallèle ; aucune modification du code n'est nécessaire.
+
+## 8. Mise à jour de l'application
 
 ```bash
 # API
@@ -345,7 +413,7 @@ ssh user@serveur "pm2 restart kemi-web"
 
 ---
 
-## 8. Vérifications après déploiement
+## 9. Vérifications après déploiement
 
 - [ ] `https://api-kemishoes.nexa-digitallab.com/health` répond `{"status":"ok"}`
 - [ ] Le catalogue s'affiche (rendu serveur → `BACKEND_API_URL` correcte)
@@ -355,7 +423,7 @@ ssh user@serveur "pm2 restart kemi-web"
 - [ ] Emails de confirmation reçus (SMTP)
 - [ ] `pm2 status` : `kemi-api` et `kemi-web` en ligne ; `pm2 logs` sans erreur
 
-## 9. Dépannage
+## 10. Dépannage
 
 | Symptôme | Cause probable |
 |----------|----------------|
@@ -363,6 +431,7 @@ ssh user@serveur "pm2 restart kemi-web"
 | `Invalid redirect_url` (carte) | `FRONTEND_URL` non public / non https |
 | Paiement Mobile Money bloqué en attente | Client n'a pas validé sur son téléphone ; webhook non configuré ; vérifier `pm2 logs kemi-api` (`campay_request_failed`) |
 | Montant refusé par CamPay en demo | `CAMPAY_MAX_AMOUNT_XAF` absent (limite 25 XAF) |
+| Erreur 500 sans explication | Relever la référence affichée (ou l'en-tête `X-Request-Id`), puis **Supervision › Logs › Référence** : pile d'appels complète. Si l'API ne démarre pas du tout : `kemishoes-fatal.log` dans `LOG_DIR` |
 | Images produits cassées | `NEXT_PUBLIC_BACKEND_API_URL` différent du domaine réel lors du build, ou dossier `uploads/` non persistant |
 | Appels API bloqués « mixed content » | URL de l'API en `http://` alors que le site est en `https://` |
 | Suppression d'un produit refusée (409) | Produit présent dans des commandes : le passer en brouillon |
@@ -414,4 +483,6 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | `GET /media` *(nouvelle)* | Accueil, « Notre histoire » (visuels de marque) |
 | `GET /health` | Supervision (hors frontend) |
 | 👑 `GET /metrics` | Supervision Prometheus — jeton d'un compte ADMIN requis |
+| 🛠 `GET /monitoring/logs`, `/logs/files`, `/logs/files/:name`, `/health`, `/audit` ; `DELETE /logs/files/:name` ; `POST /logs/purge` *(nouvelles)* | Supervision (rôle DEV) |
+| `POST /monitoring/client-errors` *(nouvelle)* | Remontée des erreurs navigateur et serveur Next |
 | `POST /auth/logout`, `POST /auth/logout-all` *(nouvelles)* | Compte › Se déconnecter (révocation de la session côté serveur) |
