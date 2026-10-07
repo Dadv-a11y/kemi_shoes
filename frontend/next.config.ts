@@ -8,7 +8,14 @@ const backendOrigin = new URL(
 
 const nextConfig: NextConfig = {
   // app/global-not-found.tsx : 404 réelle pour les URL sans route (voir ce fichier).
-  experimental: { globalNotFound: true },
+  experimental: {
+    globalNotFound: true,
+    // Hébergement mutualisé : le build par défaut lance plusieurs processus parallèles
+    // que l'hébergeur tue. Un seul processus, sans worker.
+    cpus: 1,
+    workerThreads: false,
+    webpackBuildWorker: false,
+  },
   // Build autonome : .next/standalone contient server.js + les node_modules
   // strictement nécessaires (voir scripts/standalone.mjs et DEPLOIEMENT.md).
   output: "standalone",

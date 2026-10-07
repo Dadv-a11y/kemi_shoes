@@ -31,7 +31,7 @@ import { requireAuth, requireRole, requireTrustedOrigin } from "./middleware/aut
 
 const app = express();
 const allowedOrigins = env.CORS_ORIGINS.split(",")
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
 app.set("trust proxy", 1);
@@ -40,7 +40,19 @@ app.use(httpLogger);
 app.use(requestStatsMiddleware);
 // cross-origin : les images /uploads sont affichées par le frontend (autre domaine).
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+const rejectedOrigins = new Set();
+app.use(cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    // Pas d'en-tête Origin (curl, sonde de santé, même origine) : rien à contrôler.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (!rejectedOrigins.has(origin)) {
+      rejectedOrigins.add(origin);
+      logger.warn({ origin, allowedOrigins }, 'cors_origin_rejected: ajouter cette origine exacte à CORS_ORIGINS');
+    }
+    return callback(null, false);
+  },
+}));
 app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));

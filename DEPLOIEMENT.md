@@ -533,3 +533,34 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | 🛠 `GET /monitoring/logs`, `/logs/files`, `/logs/files/:name`, `/health`, `/audit` ; `DELETE /logs/files/:name` ; `POST /logs/purge` *(nouvelles)* | Supervision (rôle DEV) |
 | `POST /monitoring/client-errors` *(nouvelle)* | Remontée des erreurs navigateur et serveur Next |
 | `POST /auth/logout`, `POST /auth/logout-all` *(nouvelles)* | Compte › Se déconnecter (révocation de la session côté serveur) |
+
+## 8. Frontend sur cPanel (build préparé hors du serveur)
+
+Le build Next.js lance plusieurs processus parallèles que certains hébergeurs mutualisés tuent.
+`next.config.ts` force un seul processus (`cpus: 1`, `workerThreads: false`), et le build se fait
+ailleurs (Linux x64, ex. cet environnement ou une VM/WSL) puis s'envoie en zip.
+
+1. **Construire** (depuis `frontend/`, sous Linux ou WSL — le dossier embarque `sharp`, binaire natif) :
+   ```bash
+   export NEXT_PUBLIC_BACKEND_API_URL=https://api-kemishoes.nexa-digitallab.com/api/v1
+   export BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
+   npm ci && npm run build:standalone
+   cd .next/standalone && zip -r ../../kemishoes-frontend.zip .
+   ```
+   `NEXT_PUBLIC_BACKEND_API_URL` est figée dans le JS au build : changer d'URL d'API impose de reconstruire.
+2. **cPanel › Setup Node.js App › Create Application** : Node 20+, mode *Production*, racine
+   `kemishoes-front`, URL du site, fichier de démarrage **`app.cjs`**.
+3. Supprimer tout lien `node_modules` créé par cPanel, extraire le zip dans la racine de l'application
+   (le zip contient son propre `node_modules` : **ne pas** cliquer sur « Run NPM Install »).
+4. Variables d'environnement : `NODE_ENV=production`, `BACKEND_API_URL`, `LOG_INGEST_KEY`. Sauvegarder puis **Restart**.
+5. Côté API (cPanel › Setup Node.js App du backend) : `CORS_ORIGINS` = origine exacte du site, sans `/` final
+   (ex. `https://kemishoes.nexa-digitallab.com`), plus `FRONTEND_URL`. Plusieurs origines : séparées par des virgules.
+   Après modification : **Restart**. Une origine refusée est journalisée (`cors_origin_rejected`).
+6. Sites sur deux sous-domaines du même domaine (`kemishoes.` et `api-kemishoes.nexa-digitallab.com`) :
+   les cookies de session fonctionnent avec `COOKIE_SAMESITE=lax` et `COOKIE_DOMAIN=.nexa-digitallab.com`.
+
+### Images produits en WebP
+
+Les images envoyées depuis l'admin sont converties en WebP (1600 px max) par l'API (`sharp`, dépendance
+optionnelle). Pour les images déjà en ligne : `npm run images:to-webp -- --dry-run` puis `npm run images:to-webp`
+dans le dossier de l'API (les URLs en base sont mises à jour).
