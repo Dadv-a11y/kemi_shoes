@@ -174,6 +174,17 @@ Vérification : `curl https://api-kemishoes.nexa-digitallab.com/health` → `{"s
 - **Où lire la cause d'un démarrage raté** : (1) `LOG_DIR/kemishoes-fatal.log` ; (2) `stderr.log` dans le dossier de l'application ;
   (3) cPanel › Métriques › Erreurs. Si **aucun** de ces fichiers ne contient de ligne datée du démarrage, Passenger n'a pas
   exécuté `app.cjs` : le nom du fichier de démarrage ou le dossier racine de l'application est mal renseigné.
+- **`ERR_MODULE_NOT_FOUND : Cannot find package 'xxx' … Did you mean to import "xxx/index.js"`** dans `kemishoes-fatal.log` :
+  Node ne trouve pas une dépendance alors que `npm start` fonctionne. Le « Did you mean » signifie que le paquet est
+  trouvable en CommonJS mais pas en ES module : installation incomplète (`package.json` du paquet absent ou illisible)
+  ou lien `node_modules` incorrect. Diagnostic dans l'environnement virtuel Node.js (commande « source … /activate »
+  affichée en haut de la page de l'application) :
+  ```bash
+  cd ~/apps/kemishoes/api && npm run check:install
+  ```
+  Le contrôle liste chaque paquet défaillant et les commandes de réparation (`rm -rf node_modules/<paquet>` puis
+  `npm install --omit=dev`). Ne supprimez jamais `node_modules` lui-même (c'est un lien vers l'environnement virtuel) :
+  utilisez « Run NPM Install » si le lien est cassé.
 - **Vérification finale** : `https://<domaine>/health` → `{"status":"ok"}` et `https://<domaine>/` → « KEMI SHOES API — en ligne. ».
 
 ---
