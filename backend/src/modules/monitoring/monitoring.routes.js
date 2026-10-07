@@ -13,6 +13,9 @@ import { queryLogs } from './logQuery.js';
 import { currentLogFile, listLogFiles, purgeLogs, resolveLogFile } from './logMaintenance.js';
 import { getHealth, listAudit } from './monitoring.service.js';
 import { reportAlert } from './alerts.js';
+import { checkSmtp, mailer, smtpSummary } from '../notifications/mailer.js';
+
+const smtpTestSchema = z.object({ body: z.object({ to: z.string().email().optional() }) });
 
 const isoDate = z.string().datetime({ offset: true });
 
@@ -125,6 +128,25 @@ router.post('/logs/purge', validate(purgeSchema), async (req, res) => {
 
 router.get('/health', async (req, res) => {
   res.json(await getHealth());
+});
+
+// Teste le SMTP (connexion + authentification) et, si une adresse est fournie, envoie un message d'essai.
+router.post('/smtp-test', validate(smtpTestSchema), async (req, res) => {
+  const result = await checkSmtp();
+  let sent = null;
+  if (result.ok && req.body.to) {
+    try {
+      await mailer.send({ to: req.body.to, subject: 'KEMI SHOES — test SMTP', html: '<p>Le serveur SMTP est correctement configuré.</p>' });
+      sent = true;
+    } catch (error) {
+      sent = false;
+      result.ok = false;
+      result.error = error.message;
+      result.code = error.code ?? null;
+    }
+  }
+  audit(req, { action: 'monitoring.smtp_tested', entityType: 'Smtp', metadata: { ok: result.ok } });
+  res.json({ ...result, sent, smtp: smtpSummary() });
 });
 
 router.get('/audit', validate(auditSchema), async (req, res) => {

@@ -15,7 +15,7 @@ try {
     console.error(`Aucun compte trouvé pour ${identifier}. Créez d'abord le compte depuis le site.`);
     process.exitCode = 1;
   } else {
-    await run(`UPDATE User SET role = 'ADMIN' WHERE id = ?`, [user.id]);
+    await run(`UPDATE User SET role = 'ADMIN', emailVerified = CASE WHEN email IS NOT NULL THEN 1 ELSE emailVerified END WHERE id = ?`, [user.id]);
     console.log(`✔ ${user.name ?? identifier} est maintenant ADMIN (reconnectez-vous pour obtenir un token à jour).`);
   }
 } finally {

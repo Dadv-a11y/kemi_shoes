@@ -18,6 +18,10 @@ export const loginSchema = z.object({
   }),
 });
 
+export const requestEmailSchema = z.object({ body: z.object({ email: z.string().email() }) });
+
+export const verifyEmailSchema = z.object({ body: z.object({ email: z.string().email(), code: z.string().length(6) }) });
+
 export const requestOtpSchema = z.object({
   body: z.object({ phone }),
 });

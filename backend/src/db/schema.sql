@@ -44,6 +44,18 @@ CREATE TABLE IF NOT EXISTS OtpCode (
 );
 CREATE INDEX IF NOT EXISTS idx_otp_phone ON OtpCode(phone);
 
+-- Codes de vérification d'adresse e-mail (inscription / connexion d'un compte non vérifié).
+CREATE TABLE IF NOT EXISTS EmailCode (
+  id        TEXT PRIMARY KEY,
+  email     TEXT NOT NULL,
+  codeHash  TEXT NOT NULL,
+  expiresAt TEXT NOT NULL,
+  consumed  INTEGER NOT NULL DEFAULT 0,
+  attempts  INTEGER NOT NULL DEFAULT 0,
+  createdAt TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_emailcode_email ON EmailCode(email);
+
 CREATE TABLE IF NOT EXISTS Product (
   id                   TEXT PRIMARY KEY,
   slugFr               TEXT NOT NULL UNIQUE,
@@ -142,6 +154,25 @@ CREATE TABLE IF NOT EXISTS "Order" (
 CREATE INDEX IF NOT EXISTS idx_order_status ON "Order"(status);
 CREATE INDEX IF NOT EXISTS idx_order_user ON "Order"(userId);
 CREATE INDEX IF NOT EXISTS idx_order_guest_phone ON "Order"(guestPhone);
+
+-- Une ligne par tentative de paiement en ligne : la référence de l'opérateur (Mobile Money)
+-- permet de vérifier une transaction et son statut en cas de remboursement ou de litige.
+CREATE TABLE IF NOT EXISTS PaymentTransaction (
+  id                TEXT PRIMARY KEY,
+  orderId           TEXT NOT NULL REFERENCES "Order"(id) ON DELETE CASCADE,
+  provider          TEXT NOT NULL,
+  reference         TEXT NOT NULL,
+  operatorReference TEXT,
+  operator          TEXT,
+  status            TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PAID','FAILED')),
+  amountFcfa        INTEGER,
+  rawPayload        TEXT,
+  createdAt         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updatedAt         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_paytx_reference ON PaymentTransaction(provider, reference);
+CREATE INDEX IF NOT EXISTS idx_paytx_order ON PaymentTransaction(orderId);
+CREATE INDEX IF NOT EXISTS idx_paytx_operator_ref ON PaymentTransaction(operatorReference);
 
 CREATE TABLE IF NOT EXISTS OrderItem (
   id             TEXT PRIMARY KEY,

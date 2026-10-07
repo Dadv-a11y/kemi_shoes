@@ -50,6 +50,9 @@ const otp1 = await call('POST', '/auth/otp/request', { body: { phone: otpPhone }
 const otp2 = await call('POST', '/auth/otp/request', { body: { phone: otpPhone }, label: 'code encore valable : pas de nouvel envoi' });
 results.push({ ok: otp1.data?.resent === true && otp2.data?.resent === false && otp2.data?.expiresAt === otp1.data?.expiresAt, method: 'POST', path: '/auth/otp/request', status: otp2.status, expected: 'resent=false, même échéance', label: 'renvoi seulement après expiration', detail: JSON.stringify(otp2.data) });
 await call('POST', '/auth/otp/verify', { body: { phone: '+237690000001', code: '000000' }, expect: [400, 401], label: 'code OTP faux' }); route('POST /auth/otp/verify');
+// Vérification d'e-mail : sans SMTP (audit local) le compte est ouvert directement, mais les routes répondent.
+await call('POST', '/auth/email/resend', { body: { email: 'inconnu@test.local' }, expect: 200, label: 'renvoi code e-mail (réponse neutre)' }); route('POST /auth/email/resend');
+await call('POST', '/auth/email/verify', { body: { email: 'inconnu@test.local', code: '000000' }, expect: 400, label: 'code e-mail faux' }); route('POST /auth/email/verify');
 const refreshed = await call('POST', '/auth/refresh', { token: reg.cookie }); route('POST /auth/refresh');
 // Refresh tokens rotatifs : l'ancien est refusé (délai de grâce multi-onglets → REFRESH_SUPERSEDED).
 const reused = await call('POST', '/auth/refresh', { token: reg.cookie, expect: 401, label: 'ancien refresh token refusé (rotation)' });
@@ -230,6 +233,9 @@ if (process.env.LOG_INGEST_KEY) {
   const serverLogs = await call('GET', `/monitoring/logs?source=frontend-server&q=${nextError}`, { token: D, label: 'erreur serveur Next' });
   results.push({ ok: res.status === 204 && serverLogs.data?.items?.length === 1, method: 'POST', path: '/monitoring/client-errors', status: res.status, expected: 'source frontend-server', label: 'clé d’ingestion Next', detail: '' });
 }
+const smtp = await call('POST', '/monitoring/smtp-test', { token: D, body: {}, label: 'test SMTP (DEV)' }); route('POST /monitoring/smtp-test');
+results.push({ ok: smtp.data?.ok === false && smtp.data?.code === 'NOT_CONFIGURED' || smtp.data?.ok === true, method: 'POST', path: '/monitoring/smtp-test', status: smtp.status, expected: 'état SMTP explicite', label: 'diagnostic SMTP', detail: JSON.stringify(smtp.data)?.slice(0, 160) });
+await call('POST', '/monitoring/smtp-test', { token: A, body: {}, expect: 403, label: 'test SMTP refusé à ADMIN' });
 for (const [token, expected, label] of [[undefined, 401, 'invité'], [A, 403, 'ADMIN refusé'], [C, 403, 'client refusé']]) {
   await call('GET', '/monitoring/logs', { token, expect: expected, label });
 }

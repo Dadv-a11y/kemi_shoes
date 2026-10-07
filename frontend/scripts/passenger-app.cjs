@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- point d'entrée CommonJS exigé par Passenger */
 // Point d'entrée Passenger (cPanel › Setup Node.js App) pour le build standalone de Next.js.
 // Passenger remplace le port d'écoute par sa propre socket : la valeur ci-dessous n'est qu'un repli.
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';

@@ -9,7 +9,9 @@ const productBase = {
   nameEn: z.string().min(1).max(160),
   descriptionFr: z.string().min(1),
   descriptionEn: z.string().min(1),
-  category: z.enum(['Homme', 'Femme', 'Nouveautes', 'Couple-Enfant']),
+  // « Nouveautés » n'est pas une catégorie choisissable : un produit est « nouveau » pendant
+  // NEW_PRODUCT_DAYS jours après sa création (voir products.service.js).
+  category: z.enum(['Homme', 'Femme', 'Couple-Enfant']),
   price: z.number().int().positive(),
   compareAtPrice: z.number().int().positive().optional(),
   status: z.enum(['draft', 'active', 'out_of_stock']).optional(),

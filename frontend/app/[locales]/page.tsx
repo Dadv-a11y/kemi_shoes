@@ -30,7 +30,7 @@ export default async function Home({ params }: { params: Promise<{ locales: stri
   const allProducts = await getCatalogProducts();
   const featuredProducts = allProducts.slice(0, 4);
   const categoryImage = (category: (typeof categories)[number]) =>
-    "image" in category ? category.image : allProducts.find((product) => product.category === category.category)?.image ?? FALLBACK_IMAGE;
+    "image" in category ? category.image : allProducts.find((product) => (category.category === "nouveautes" ? product.isNew : product.category === category.category))?.image ?? FALLBACK_IMAGE;
   const { savoirFaire, founder } = BRAND_IMAGES;
 
   return (
@@ -55,7 +55,7 @@ export default async function Home({ params }: { params: Promise<{ locales: stri
 
       <section className="savoir-section"><div className="savoir-inner"><div className="savoir-media"><Image src={savoirFaire.src} alt={savoirFaire.altFr} fill sizes="(max-width: 860px) 100vw, 50vw" /><span className="play-indicator"><Play aria-hidden="true" /></span><span className="stitched-tag">Depuis l&apos;atelier</span></div><div className="savoir-copy"><span className="eyebrow">{t("home.atelier")}</span><h2>{t("home.atelierTitle")}</h2><p>{t("home.atelierText")}</p><Link href={localized("/notre-histoire")} className={cn(buttonVariants({ variant: "outline" }), "light-button")}>{t("home.discoverWorkshop")} <ArrowUpRight data-icon="inline-end" /></Link></div></div></section>
 
-      <section className="section home-section"><div className="section-heading"><h2>{t("home.favorites")}</h2><Link href={`/${locale}/boutique#shop-results`} className="text-link dark-link">{t("home.viewAll")} <ArrowUpRight aria-hidden="true" /></Link></div><div className="favorites-grid">{featuredProducts.map((product) => <ProductCard key={product.id ?? product.slug.fr} product={product} locale={locale} categoryLabel={t(`catalog.categories.${product.category}` as "catalog.categories.tous")} />)}{featuredProducts.length === 0 && <p className="catalog-empty">Aucun produit disponible pour le moment.</p>}</div></section>
+      <section className="section home-section"><div className="section-heading"><h2>{t("home.favorites")}</h2><Link href={`/${locale}/boutique#shop-results`} className="text-link dark-link">{t("home.viewAll")} <ArrowUpRight aria-hidden="true" /></Link></div><div className="favorites-grid">{featuredProducts.map((product) => <ProductCard key={product.id ?? product.slug.fr} product={product} locale={locale} categoryLabel={t(`catalog.categories.${product.displayCategory}` as "catalog.categories.tous")} />)}{featuredProducts.length === 0 && <p className="catalog-empty">Aucun produit disponible pour le moment.</p>}</div></section>
 
       <section className="about-section section"><div className="about-media"><Image src={founder.src} alt={founder.altFr} fill sizes="(max-width: 860px) 100vw, 50vw" /></div><div className="about-copy"><span className="eyebrow">KEMI SHOES</span><h2>{t("home.aboutTitle")}</h2><p>{t("home.aboutText")}</p><Link href={localized("/notre-histoire")} className={cn(buttonVariants(), "about-button")}>{t("home.fullStory")} <ArrowUpRight data-icon="inline-end" /></Link></div></section>
 

@@ -5,6 +5,9 @@ import { createSession, rotateSession, revokeSession, revokeAllSessions, session
 import { unauthorized, conflict } from '../../middleware/errorHandler.js';
 import { requestOtp as sendOtp, verifyOtp as checkOtp } from './otp.service.js';
 import { mailer } from '../notifications/mailer.js';
+import { AppError } from '../../middleware/errorHandler.js';
+import { logger } from '../../config/logger.js';
+import { emailVerificationMode, sendEmailCode, verifyEmailCode } from './emailCode.service.js';
 import { authFailuresTotal } from '../../config/metrics.js';
 
 function toPublicUser(user) {
@@ -33,19 +36,40 @@ async function linkGuestOrdersToUser(userId, phone) {
 // Email + mot de passe
 // ---------------------------------------------------------------------------
 
+/** Réponse « code à saisir » : aucune session n'est ouverte tant que l'adresse n'est pas confirmée. */
+async function verificationChallenge(email) {
+  const { expiresAt } = await sendEmailCode(email);
+  return { verificationRequired: true, email, expiresAt };
+}
+
+function sendWelcome(user) {
+  if (!user.email) return;
+  mailer.sendWelcomeEmail({ to: user.email, name: user.name }).catch((err) => logger.error({ err: err.message, to: user.email }, 'welcome_email_failed'));
+}
+
 export async function registerWithPassword({ name, email, password }) {
-  const existing = await get(`SELECT id FROM User WHERE email = ?`, [email]);
-  if (existing) throw conflict('Un compte existe déjà avec cet email.');
+  const mode = emailVerificationMode();
+  if (mode === 'unavailable') {
+    throw new AppError('L’inscription par e-mail est momentanément indisponible.', 503, 'EMAIL_UNAVAILABLE');
+  }
+  const existing = await get(`SELECT id, emailVerified FROM User WHERE email = ?`, [email]);
+  // Un compte non vérifié peut être repris : seul le propriétaire de la boîte reçoit le code.
+  if (existing && (mode === 'off' || existing.emailVerified)) throw conflict('Un compte existe déjà avec cet email.');
 
   const passwordHash = await hashSecret(password);
-  const id = randomUUID();
-  await run(
-    `INSERT INTO User (id, name, email, passwordHash, provider) VALUES (?, ?, ?, ?, 'PASSWORD')`,
-    [id, name, email, passwordHash]
-  );
-  const user = await get(`SELECT * FROM User WHERE id = ?`, [id]);
+  const id = existing?.id ?? randomUUID();
+  if (existing) {
+    await run(`UPDATE User SET name = ?, passwordHash = ? WHERE id = ?`, [name, passwordHash, id]);
+  } else {
+    await run(
+      `INSERT INTO User (id, name, email, passwordHash, provider) VALUES (?, ?, ?, ?, 'PASSWORD')`,
+      [id, name, email, passwordHash]
+    );
+  }
+  if (mode === 'on') return verificationChallenge(email);
 
-  mailer.sendWelcomeEmail({ to: email, name }).catch(() => {});
+  const user = await get(`SELECT * FROM User WHERE id = ?`, [id]);
+  sendWelcome(user);
   return issueTokens(user);
 }
 
@@ -57,6 +81,25 @@ export async function loginWithPassword({ email, password }) {
     // pour ne pas laisser un attaquant énumérer les comptes existants (OWASP A07).
     throw unauthorized('Email ou mot de passe incorrect.');
   }
+  // Mot de passe correct mais adresse jamais confirmée : un code est (ré)envoyé.
+  if (!user.emailVerified && emailVerificationMode() === 'on') return verificationChallenge(email);
+  return issueTokens(user);
+}
+
+/** Renvoi d'un code : réponse neutre, qu'un compte non vérifié existe ou non (pas d'énumération). */
+export async function resendEmailVerification(email) {
+  const user = await get(`SELECT id, emailVerified FROM User WHERE email = ?`, [email]);
+  if (!user || user.emailVerified || emailVerificationMode() !== 'on') return { email };
+  return verificationChallenge(email);
+}
+
+export async function verifyEmailAndAuthenticate({ email, code }) {
+  await verifyEmailCode(email, code);
+  const user = await get(`SELECT * FROM User WHERE email = ?`, [email]);
+  if (!user) throw unauthorized('Compte introuvable.');
+  await run(`UPDATE User SET emailVerified = 1 WHERE id = ?`, [user.id]);
+  user.emailVerified = 1;
+  sendWelcome(user);
   return issueTokens(user);
 }
 

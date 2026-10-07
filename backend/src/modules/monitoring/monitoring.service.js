@@ -6,6 +6,7 @@ import { env } from '../../config/env.js';
 import { LOG_DIR, logFileState } from '../../config/logger.js';
 import { all, get } from '../../db/client.js';
 import { getSmsProvider, getWhatsappProvider } from '../notifications/sms/sms.factory.js';
+import { smtpSummary } from '../notifications/mailer.js';
 import { listLogFiles } from './logMaintenance.js';
 import { getRequestStats } from './requestStats.js';
 
@@ -46,6 +47,7 @@ export async function getHealth() {
       level: env.LOG_LEVEL,
     },
     integrations: {
+      smtp: smtpSummary(),
       sms: getSmsProvider()?.name ?? 'none',
       whatsapp: getWhatsappProvider()?.name ?? 'none',
       alertEmails: env.ALERT_EMAILS ? 'ALERT_EMAILS' : 'comptes DEV',

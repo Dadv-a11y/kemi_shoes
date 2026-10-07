@@ -564,3 +564,26 @@ ailleurs (Linux x64, ex. cet environnement ou une VM/WSL) puis s'envoie en zip.
 Les images envoyées depuis l'admin sont converties en WebP (1600 px max) par l'API (`sharp`, dépendance
 optionnelle). Pour les images déjà en ligne : `npm run images:to-webp -- --dry-run` puis `npm run images:to-webp`
 dans le dossier de l'API (les URLs en base sont mises à jour).
+
+
+## 9. E-mails (SMTP) et vérification de l'adresse
+
+Les e-mails partent par SMTP (variables `SMTP_*` de « Setup Node.js App », puis **Restart**). Sur cPanel :
+`SMTP_HOST=mail.<votre-domaine>`, `SMTP_PORT=465` + `SMTP_SECURE=true` (ou 587 + `false`), `SMTP_USER` = l'adresse
+complète de la boîte créée dans cPanel › Comptes de messagerie, `SMTP_PASS` = son mot de passe, `SMTP_FROM` = la même adresse
+(`KEMI SHOES <no-reply@<votre-domaine>>`).
+
+**Vérifier que c'est branché** — dans le journal `kemishoes.<date>.<n>.log`, au démarrage :
+- `smtp_ready` : connexion et authentification réussies ;
+- `smtp_not_configured` : `SMTP_HOST` absent, **aucun e-mail n'est envoyé** (les messages sont seulement écrits dans les logs : `email_not_sent_smtp_not_configured`) ;
+- `smtp_unreachable` : le serveur répond mal ; le champ `code` donne la cause (`EAUTH` identifiants, `ECONNECTION`/`ETIMEDOUT` hôte ou port, `ESOCKET` TLS : essayer 465 + `true` ou 587 + `false`).
+
+Chaque envoi échoué est ensuite journalisé (`email_send_failed`, avec l'hôte, le code d'erreur et la réponse du serveur). Dans
+**Supervision › Santé**, la tuile « Serveur SMTP » affiche la configuration en vigueur (jamais le mot de passe), et
+`POST /api/v1/monitoring/smtp-test` (rôle DEV, corps `{"to":"vous@exemple.com"}`) teste la connexion et envoie un message d'essai.
+
+**Vérification de l'adresse** : à l'inscription (et à la connexion d'un compte jamais confirmé), un code à 6 chiffres est envoyé
+par e-mail ; aucune session n'est ouverte tant qu'il n'est pas saisi sur la page de vérification. Un nouveau code n'est émis qu'après
+expiration du précédent (`OTP_TTL_MINUTES`, 5 min). Sans SMTP en production, l'inscription par e-mail répond 503 (`EMAIL_UNAVAILABLE`).
+Les comptes créés avant cette fonction doivent confirmer leur adresse à la prochaine connexion ; `npm run user:set-role` et
+`npm run user:make-admin` marquent l'adresse comme vérifiée (à utiliser pour les comptes ADMIN/DEV si le SMTP n'est pas encore prêt).

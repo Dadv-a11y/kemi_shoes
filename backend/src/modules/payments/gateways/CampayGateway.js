@@ -136,6 +136,9 @@ export class CampayGateway extends PaymentGateway {
       amount: Number(result.amount),
       externalReference: orderIdFromExternalReference(result.external_reference),
       operator: result.operator ?? null,
+      // Référence de la transaction chez l'opérateur (MTN / Orange) : sert à la retrouver en cas de litige.
+      operatorReference: result.operator_reference ?? null,
+      raw: result,
     };
   }
 }

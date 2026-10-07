@@ -6,7 +6,7 @@ export function setupTestDb() {
   databasePromise ??= openDb();
   beforeEach(async () => {
     await databasePromise;
-    await run(`TRUNCATE TABLE AuditLog, OrderStatusEvent, OrderItem, "Order", Review, ProductSize, ProductColor, ProductImage, Product, DeliveryZone, OtpCode, Address, "User", ContentPage, Setting RESTART IDENTITY CASCADE`);
+    await run(`TRUNCATE TABLE AuditLog, EmailCode, PaymentTransaction, OrderStatusEvent, OrderItem, "Order", Review, ProductSize, ProductColor, ProductImage, Product, DeliveryZone, OtpCode, Address, "User", ContentPage, Setting RESTART IDENTITY CASCADE`);
   });
   afterAll(async () => {
     await databasePromise;

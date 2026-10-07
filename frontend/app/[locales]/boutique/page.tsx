@@ -37,7 +37,7 @@ export default async function ShopPage({ params, searchParams }: { params: Promi
       <section id="shop-results" className="section shop-results">
         <div className="shop-toolbar"><span className="catalog-result-count">{visibleProducts.length} {t("catalog.items")}</span></div>
         <div className="catalog-grid">
-          {visibleProducts.map((product) => <ProductCard key={product.id ?? product.slug.fr} product={product} locale={locale} categoryLabel={t(`catalog.categories.${product.category}` as "catalog.categories.tous")} />)}
+          {visibleProducts.map((product) => <ProductCard key={product.id ?? product.slug.fr} product={product} locale={locale} categoryLabel={t(`catalog.categories.${product.displayCategory}` as "catalog.categories.tous")} />)}
           {visibleProducts.length === 0 && <p className="catalog-empty">Aucun produit disponible dans cette catégorie.</p>}
         </div>
       </section>

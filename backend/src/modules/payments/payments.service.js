@@ -6,6 +6,7 @@ import { badRequest, conflict, notFound, unauthorized } from '../../middleware/e
 import { getGateway } from './payments.factory.js';
 import { chargeableAmount, isCampayConfigured, isCampayDemo, orderIdFromExternalReference } from './gateways/CampayGateway.js';
 import { transitionStatus } from '../orders/orders.service.js';
+import { recordAttempt, syncTransaction } from './payments.transactions.js';
 
 const ONLINE_METHODS = ['MOBILE_MONEY', 'CARD'];
 
@@ -32,7 +33,8 @@ async function loadOrder(orderId) {
  * Applique un résultat de paiement à la commande. Idempotent : un webhook
  * reçu après un polling déjà concluant (ou l'inverse) ne fait rien.
  */
-async function applyPaymentResult(order, { status, reference }) {
+async function applyPaymentResult(order, { status, reference, transaction }) {
+  await syncTransaction({ orderId: order.id, reference, transaction });
   if (order.paymentStatus === 'PAID') return order;
 
   if (status === 'paid') {
@@ -65,7 +67,7 @@ export async function getPaymentStatus(orderId) {
     try {
       const transaction = await getGateway(order.paymentMethod).verifyPayment(order.paymentRef);
       assertTransactionMatchesOrder(order, transaction);
-      order = await applyPaymentResult(order, { status: transaction.status, reference: order.paymentRef });
+      order = await applyPaymentResult(order, { status: transaction.status, reference: order.paymentRef, transaction });
     } catch (err) {
       logger.error({ err, orderId }, 'payment_status_check_failed');
     }
@@ -83,7 +85,7 @@ export async function confirmPayment(orderId, reference) {
   const transaction = await getGateway(order.paymentMethod).verifyPayment(reference);
   assertTransactionMatchesOrder(order, transaction);
   if (!transaction.externalReference) throw badRequest('Transaction non rattachée à une commande.');
-  return toPublicStatus(await applyPaymentResult(order, { status: transaction.status, reference }));
+  return toPublicStatus(await applyPaymentResult(order, { status: transaction.status, reference, transaction }));
 }
 
 export async function retryPayment(orderId, { phone, paymentMethod } = {}) {
@@ -102,6 +104,7 @@ export async function retryPayment(orderId, { phone, paymentMethod } = {}) {
     name: order.guestName,
   });
   await run(`UPDATE "Order" SET paymentMethod = ?, paymentStatus = 'PENDING', paymentRef = ? WHERE id = ?`, [method, result.reference ?? null, order.id]);
+  await recordAttempt({ orderId: order.id, reference: result.reference, amountFcfa: chargeableAmount(order.totalFcfa), operator: result.operator });
   return {
     ...toPublicStatus(await loadOrder(order.id)),
     payment: { status: result.status, reference: result.reference ?? null, ussdCode: result.ussdCode ?? null, operator: result.operator ?? null, redirectUrl: result.redirectUrl ?? null },
@@ -133,7 +136,7 @@ export async function handleCampayWebhook(payload) {
   }
   const transaction = await getGateway(order.paymentMethod === 'CARD' ? 'CARD' : 'MOBILE_MONEY').verifyPayment(reference);
   assertTransactionMatchesOrder(order, transaction);
-  await applyPaymentResult(order, { status: transaction.status, reference });
+  await applyPaymentResult(order, { status: transaction.status, reference, transaction });
   return { received: true };
 }
 

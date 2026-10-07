@@ -74,7 +74,7 @@ async function main() {
       nameFr: humanize(key), nameEn: humanize(key),
       descriptionFr: 'Modèle fait main à Douala par l’atelier KEMI SHOES.',
       descriptionEn: 'Handmade in Douala by the KEMI SHOES workshop.',
-      category: 'Nouveautes', price: 25000, status: 'draft',
+      category: 'Femme', price: 25000, status: 'draft',
       colors: [{ name: 'Cognac', hex: '#92502F' }], sizes: ['37', '38', '39', '40', '41'],
     };
     if (!products[key]) report.fallback.push(key);

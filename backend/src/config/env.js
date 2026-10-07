@@ -42,6 +42,8 @@ const envSchema = z.object({
   SMTP_SECURE: booleanEnv.default(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  // Vérification de l'e-mail à l'inscription par code : auto = active dès que le SMTP est configuré.
+  EMAIL_VERIFICATION: z.enum(['auto', 'on', 'off']).default('auto'),
   SMTP_FROM: z.string().default('KEMI SHOES <no-reply@kemishoes.com>'),
 
   GOOGLE_CLIENT_ID: z.string().optional(),

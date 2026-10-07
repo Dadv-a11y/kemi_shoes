@@ -10,6 +10,7 @@ export type CatalogApiProduct = {
   descriptionFr: string;
   descriptionEn: string;
   category: string;
+  isNew?: boolean;
   price: number;
   status: string;
   materialCustomizable?: boolean | number;
@@ -43,6 +44,8 @@ export function mapProduct(product: CatalogApiProduct): Product {
     image,
     images: ordered.length ? ordered : [image],
     category: mapCategory(product.category),
+    isNew: Boolean(product.isNew),
+    displayCategory: product.isNew ? "nouveautes" : mapCategory(product.category),
     colors: (product.colors ?? []).map((color) => color.hex),
     colorOptions: product.colors ?? [],
     material: { fr: BASE_MATERIAL.fr, en: BASE_MATERIAL.en },

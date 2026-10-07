@@ -10,6 +10,7 @@ import { logger, logFatalSync, logFileState, LOG_DIR } from "./config/logger.js"
 import { httpLogger, requestStatsMiddleware } from "./modules/monitoring/httpLogger.js";
 import { scheduleLogMaintenance } from "./modules/monitoring/logMaintenance.js";
 import { reportAlert } from "./modules/monitoring/alerts.js";
+import { checkSmtp, smtpSummary } from "./modules/notifications/mailer.js";
 import { openDb } from "./db/client.js";
 import { metricsMiddleware, register } from "./config/metrics.js";
 import authRoutes from "./modules/auth/auth.route.js";
@@ -108,6 +109,18 @@ if (process.env.NODE_ENV !== "test") {
     setTimeout(() => process.exit(0), 200).unref();
   });
 
+  // Au démarrage : indique clairement si l'envoi d'e-mails est branché et si le serveur SMTP répond.
+  async function logSmtpState() {
+    const summary = smtpSummary();
+    if (!summary.configured) {
+      logger.warn({ smtp: summary }, "smtp_not_configured : aucun e-mail ne sera envoyé (définir SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM)");
+      return;
+    }
+    const check = await checkSmtp();
+    if (check.ok) logger.info({ smtp: summary }, "smtp_ready : connexion et authentification SMTP réussies");
+    else logger.error({ smtp: summary, ...check }, "smtp_unreachable : les e-mails (codes de vérification, commandes) ne partiront pas");
+  }
+
   openDb()
     .then(() =>
       app.listen(env.PORT, () => {
@@ -118,6 +131,7 @@ if (process.env.NODE_ENV !== "test") {
         }
         if (logFileState.error) logger.warn({ logDir: LOG_DIR, error: logFileState.error }, "log_file_unavailable : logs en console uniquement");
         scheduleLogMaintenance();
+        logSmtpState();
       }),
     )
     .catch((error) => {
