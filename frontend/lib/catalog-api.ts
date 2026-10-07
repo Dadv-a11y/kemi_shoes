@@ -82,11 +82,3 @@ export async function getCatalogProductBySlug(slug: string, locale: Locale): Pro
 
   return undefined;
 }
-
-export type BrandMedia = { key: string; url: string; altFr: string | null; altEn: string | null };
-
-/** Visuels de marque (atelier, fondatrice) indexés par clé — voir backend/scripts/seed-demo.data.js. */
-export async function getBrandMedia(): Promise<Record<string, BrandMedia>> {
-  const result = await request<BrandMedia[]>("/media?category=brand");
-  return Object.fromEntries((result ?? []).map((media) => [media.key, { ...media, url: resolveMediaUrl(media.url) }]));
-}

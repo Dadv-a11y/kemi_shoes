@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ArrowUpRight, Play } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { getI18n } from "@/locales/server";
-import { getBrandMedia, getCatalogProducts } from "@/lib/catalog-api";
+import { getCatalogProducts } from "@/lib/catalog-api";
+import { BRAND_IMAGES } from "@/lib/brand-images";
 import { type Locale } from "@/lib/catalog";
 import { ProductCard } from "@/components/catalog/product-card";
 import { cn } from "@/lib/utils";
@@ -26,12 +27,11 @@ export default async function Home({ params }: { params: Promise<{ locales: stri
   const locale: Locale = locales === "en" ? "en" : "fr";
   // Liens toujours préfixés par la locale : sans préfixe, le proxy redirige vers /fr.
   const localized = (path: string) => `/${locale}${path}`;
-  const [allProducts, media] = await Promise.all([getCatalogProducts(), getBrandMedia()]);
+  const allProducts = await getCatalogProducts();
   const featuredProducts = allProducts.slice(0, 4);
   const categoryImage = (category: (typeof categories)[number]) =>
     "image" in category ? category.image : allProducts.find((product) => product.category === category.category)?.image ?? FALLBACK_IMAGE;
-  const atelier = media["atelier-hero"];
-  const founder = media.founder;
+  const { savoirFaire, founder } = BRAND_IMAGES;
 
   return (
     <main>
@@ -53,11 +53,11 @@ export default async function Home({ params }: { params: Promise<{ locales: stri
 
       <section className="section home-section"><div className="section-heading"><h2>{t("home.choosePair")}</h2><Link href={localized("/boutique")} className="text-link dark-link">{t("home.viewAll")} <ArrowUpRight aria-hidden="true" /></Link></div><div className="home-category-grid">{categories.map((category) => <Link href={localized(category.href)} className="home-category-card" key={category.key}><Image src={categoryImage(category)} alt={t(`home.categories.${category.key}` as "home.categories.men")} fill sizes="(max-width: 700px) 100vw, 25vw" /><span>{t(`home.categories.${category.key}` as "home.categories.men")}</span></Link>)}</div></section>
 
-      <section className="savoir-section"><div className="savoir-inner"><div className="savoir-media"><Image src={atelier?.url ?? FALLBACK_IMAGE} alt={atelier?.altFr ?? "Atelier KEMI SHOES"} fill sizes="(max-width: 860px) 100vw, 50vw" /><span className="play-indicator"><Play aria-hidden="true" /></span><span className="stitched-tag">Depuis l&apos;atelier</span></div><div className="savoir-copy"><span className="eyebrow">{t("home.atelier")}</span><h2>{t("home.atelierTitle")}</h2><p>{t("home.atelierText")}</p><Link href={localized("/notre-histoire")} className={cn(buttonVariants({ variant: "outline" }), "light-button")}>{t("home.discoverWorkshop")} <ArrowUpRight data-icon="inline-end" /></Link></div></div></section>
+      <section className="savoir-section"><div className="savoir-inner"><div className="savoir-media"><Image src={savoirFaire.src} alt={savoirFaire.altFr} fill sizes="(max-width: 860px) 100vw, 50vw" /><span className="play-indicator"><Play aria-hidden="true" /></span><span className="stitched-tag">Depuis l&apos;atelier</span></div><div className="savoir-copy"><span className="eyebrow">{t("home.atelier")}</span><h2>{t("home.atelierTitle")}</h2><p>{t("home.atelierText")}</p><Link href={localized("/notre-histoire")} className={cn(buttonVariants({ variant: "outline" }), "light-button")}>{t("home.discoverWorkshop")} <ArrowUpRight data-icon="inline-end" /></Link></div></div></section>
 
       <section className="section home-section"><div className="section-heading"><h2>{t("home.favorites")}</h2><Link href={`/${locale}/boutique#shop-results`} className="text-link dark-link">{t("home.viewAll")} <ArrowUpRight aria-hidden="true" /></Link></div><div className="favorites-grid">{featuredProducts.map((product) => <ProductCard key={product.id ?? product.slug.fr} product={product} locale={locale} categoryLabel={t(`catalog.categories.${product.category}` as "catalog.categories.tous")} />)}{featuredProducts.length === 0 && <p className="catalog-empty">Aucun produit disponible pour le moment.</p>}</div></section>
 
-      <section className="about-section section"><div className="about-media"><Image src={founder?.url ?? FALLBACK_IMAGE} alt={founder?.altFr ?? "Fondatrice de KEMI SHOES"} fill sizes="(max-width: 860px) 100vw, 50vw" /></div><div className="about-copy"><span className="eyebrow">KEMI SHOES</span><h2>{t("home.aboutTitle")}</h2><p>{t("home.aboutText")}</p><Link href={localized("/notre-histoire")} className={cn(buttonVariants(), "about-button")}>{t("home.fullStory")} <ArrowUpRight data-icon="inline-end" /></Link></div></section>
+      <section className="about-section section"><div className="about-media"><Image src={founder.src} alt={founder.altFr} fill sizes="(max-width: 860px) 100vw, 50vw" /></div><div className="about-copy"><span className="eyebrow">KEMI SHOES</span><h2>{t("home.aboutTitle")}</h2><p>{t("home.aboutText")}</p><Link href={localized("/notre-histoire")} className={cn(buttonVariants(), "about-button")}>{t("home.fullStory")} <ArrowUpRight data-icon="inline-end" /></Link></div></section>
 
       <section className="find-pair-section"><div className="find-pair-inner"><div className="find-pair-heading"><div><span className="eyebrow">KEMI / COLLECTION</span><h2>{t("home.findPairTitle")}</h2></div><p>{t("home.findPairText")}</p></div><div className="find-pair-grid">{categories.map((category, index) => <Link href={localized(category.href)} className={`find-pair-link find-pair-link-${index + 1}`} key={category.key}><span>{t(`home.categories.${category.key}` as "home.categories.men")}</span><ArrowUpRight aria-hidden="true" /></Link>)}</div><Link href={localized("/boutique")} className={cn(buttonVariants({ size: "lg" }), "find-pair-cta")}>{t("home.exploreCollection")} <ArrowUpRight data-icon="inline-end" /></Link></div></section>
     </main>

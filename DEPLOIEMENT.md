@@ -105,9 +105,10 @@ npm run db:seed -- --force # réapplique aussi noms, prix, tailles et photos des
 ```
 
 - Chaque photo est prise en compte : les vues d'un même modèle (`nom.jpg`, `nom_1.jpg`, `nom_2.jpg`)
-  deviennent les images d'un seul produit (25 produits / 39 photos), copiées dans `uploads/products/`.
-- Les photos atelier / fondatrice sont enregistrées comme visuels de marque (table `MediaAsset`,
-  route publique `GET /api/v1/media`) et affichées par l'accueil et « Notre histoire ».
+  deviennent les images d'un seul produit (71 produits / 131 photos), copiées dans `uploads/products/`.
+- Les photos atelier / fondatrice / procédés ne passent pas par le seed : ce sont des fichiers
+  statiques de `frontend/public/` (`atelier*.jpg`, `fondatrice_kemi_shoes.jpg`, `methodologie/`),
+  référencés dans `frontend/lib/brand-images.ts`.
 - Noms FR/EN, descriptions, catégories, prix, couleurs et tailles : `backend/scripts/seed-demo.data.js`
   (à ajuster avant le seed si besoin). Une photo ajoutée sans fiche dans ce fichier est créée
   en **brouillon** avec un nom déduit du fichier, pour qu'aucune image ne soit ignorée.
@@ -480,7 +481,7 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | 👑👑 `PATCH /users/:id/role` *(nouvelle)* | Admin › Paramètres › Utilisateurs & rôles |
 | `GET /settings` *(nouvelle)* | Pied de page (WhatsApp, réseaux, adresse) |
 | 👑👑 `PUT /settings` *(nouvelle)* | Admin › Paramètres › Informations boutique |
-| `GET /media` *(nouvelle)* | Accueil, « Notre histoire » (visuels de marque) |
+| `GET /media` *(nouvelle)* | Non utilisée par le frontend (visuels de marque servis depuis `frontend/public/`) |
 | `GET /health` | Supervision (hors frontend) |
 | 👑 `GET /metrics` | Supervision Prometheus — jeton d'un compte ADMIN requis |
 | 🛠 `GET /monitoring/logs`, `/logs/files`, `/logs/files/:name`, `/health`, `/audit` ; `DELETE /logs/files/:name` ; `POST /logs/purge` *(nouvelles)* | Supervision (rôle DEV) |
