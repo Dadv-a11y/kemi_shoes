@@ -14,6 +14,7 @@
     "db:reset": "node scripts/db-reset.js",
     "user:make-admin": "node scripts/make-admin.js",
     "user:set-role": "node scripts/set-role.js",
+    "check:install": "node scripts/check-install.js",
     "db:seed": "node scripts/seed-demo.js"
   },
   "license": "UNLICENSED",
