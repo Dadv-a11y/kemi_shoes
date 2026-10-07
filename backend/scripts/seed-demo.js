@@ -3,19 +3,19 @@
 //   npm run db:seed            # ajoute ce qui manque (idempotent)
 //   npm run db:seed -- --force # met aussi à jour les produits déjà présents
 //
-// Chaque image du dossier est prise en compte, sans exception :
-//  - photos de produits : regroupées par modèle (`nom.jpg`, `nom_1.jpg`… = vues du
-//    même produit), copiées dans uploads/products puis rattachées au produit ;
-//  - photos de marque (atelier, fondatrice) : enregistrées dans MediaAsset.
+// Chaque image du dossier est prise en compte, sans exception : les photos sont
+// regroupées par modèle (`nom.jpg`, `nom_1.jpg`… = vues du même produit), copiées
+// dans uploads/products puis rattachées au produit.
 // Une image absente de seed-demo.data.js devient quand même un produit (brouillon,
 // nom déduit du fichier) pour qu'aucune photo ne soit ignorée.
-import { randomUUID } from 'node:crypto';
+// Les visuels de marque (atelier, fondatrice, procédés) ne passent pas par ici :
+// ce sont des fichiers statiques de frontend/public.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openDb, closeDb, get, run } from '../src/db/client.js';
+import { openDb, closeDb, get } from '../src/db/client.js';
 import { createProduct, updateProduct } from '../src/modules/products/products.service.js';
-import { PRODUCTS, BRAND_MEDIA } from './seed-demo.data.js';
+import { PRODUCTS } from './seed-demo.data.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(root, 'images_demo');
@@ -25,7 +25,6 @@ const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 const nfc = (value) => value.normalize('NFC');
 const products = Object.fromEntries(Object.entries(PRODUCTS).map(([key, value]) => [nfc(key), value]));
-const brandMedia = Object.fromEntries(Object.entries(BRAND_MEDIA).map(([key, value]) => [nfc(key), value]));
 
 function slugify(text) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe')
@@ -39,7 +38,7 @@ function humanize(stem) {
 
 /** Rattache un fichier à son modèle : nom exact, sinon nom sans suffixe de vue (_1, _2…). */
 function resolveKey(stem) {
-  if (products[stem] || brandMedia[stem]) return stem;
+  if (products[stem]) return stem;
   const base = stem.replace(/_\d+$/, '');
   return base;
 }
@@ -67,26 +66,10 @@ async function main() {
   for (const list of groups.values()) list.sort((a, b) => a.stem.length - b.stem.length || a.stem.localeCompare(b.stem));
 
   await openDb();
-  const report = { created: [], updated: [], skipped: [], media: [], fallback: [] };
+  const report = { created: [], updated: [], skipped: [], fallback: [] };
   let imageCount = 0;
 
   for (const [key, list] of groups) {
-    // --- Visuels de marque ---
-    if (brandMedia[key]) {
-      const media = brandMedia[key];
-      const { file } = list[0];
-      const url = await copyToUploads(file, `brand-${slugify(media.key)}${path.extname(file).toLowerCase()}`);
-      await run(
-        `INSERT INTO MediaAsset (id, key, category, url, altFr, altEn) VALUES (?, ?, 'brand', ?, ?, ?)
-         ON CONFLICT (key) DO UPDATE SET url = EXCLUDED.url, altFr = EXCLUDED.altFr, altEn = EXCLUDED.altEn`,
-        [randomUUID(), media.key, url, media.altFr, media.altEn]
-      );
-      report.media.push(`${media.key} ← ${file}`);
-      imageCount += list.length;
-      continue;
-    }
-
-    // --- Produits ---
     const definition = products[key] ?? {
       nameFr: humanize(key), nameEn: humanize(key),
       descriptionFr: 'Modèle fait main à Douala par l’atelier KEMI SHOES.',
@@ -139,8 +122,6 @@ async function main() {
   report.created.forEach((line) => console.log(`   + ${line}`));
   if (report.updated.length) console.log(`↻ Produits mis à jour : ${report.updated.length}`);
   if (report.skipped.length) console.log(`• Déjà présents (relancer avec --force pour les mettre à jour) : ${report.skipped.length}`);
-  console.log(`✔ Visuels de marque : ${report.media.length}`);
-  report.media.forEach((line) => console.log(`   + ${line}`));
   if (report.fallback.length) {
     console.log(`⚠ ${report.fallback.length} image(s) sans fiche dans seed-demo.data.js, créées en brouillon :`);
     report.fallback.forEach((key) => console.log(`   ? ${key}`));

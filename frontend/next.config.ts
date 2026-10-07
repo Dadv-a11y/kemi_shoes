@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   experimental: { globalNotFound: true },
   // Build autonome : .next/standalone contient server.js + les node_modules
   // strictement nécessaires (voir scripts/standalone.mjs et DEPLOIEMENT.md).
- 
+  output: "standalone",
   images: {
     remotePatterns: [
       {
