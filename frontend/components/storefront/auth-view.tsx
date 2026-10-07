@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createOtpChallenge } from "@/lib/auth";
 import { backendApiUrl, backendRequest, onSignedIn } from "@/lib/backend-api";
+import { AuthAside } from "@/components/storefront/auth-aside";
 
 type Labels = Record<string, string>;
 /** Méthodes de connexion réellement configurées côté backend (GET /auth/providers). */
@@ -80,25 +81,26 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
     }
   };
 
-  return <main className="auth-page"><div className="auth-wrap"><div className="auth-card">
+  return <main className="auth-page"><div className="auth-split"><AuthAside text={labels.intro} /><div className="auth-wrap"><div className="auth-card">
     <div className="auth-tabs"><button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>{labels.login}</button><button className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setError(""); }}>{labels.signup}</button></div>
-    <p className="auth-intro">{labels.intro}</p>
+    <h1 className="auth-title">{mode === "login" ? labels.login : labels.signup}</h1><p className="auth-intro">{labels.intro}</p>
     {!providers ? <p className="auth-intro">…</p> : <>
     {providers.google && <a className="auth-oauth" href={`${backendApiUrl}/auth/oauth/google`}><span>G</span>{labels.google}</a>}{providers.facebook && <a className="auth-oauth" href={`${backendApiUrl}/auth/oauth/facebook`}><span>f</span>{labels.facebook}</a>}
     {(providers.google || providers.facebook) && <div className="auth-divider"><i />{labels.or}<i /></div>}
     {/* Téléphone + OTP seulement si un fournisseur SMS/WhatsApp est branché côté backend. */}
     {providers.phone && !emailOpen ? <>
-      {mode === "signup" && <AuthField label={labels.name} value={name} placeholder={labels.namePlaceholder} onChange={setName} />}
+      {mode === "signup" && <AuthField label={labels.name} value={name} placeholder={labels.namePlaceholder} onChange={setName} autoComplete="name" />}
       <div className="auth-field"><label>{labels.phone}</label><div className="auth-phone"><select aria-label={labels.countryCode} value={countryCode} onChange={(event) => setCountryCode(event.target.value)}><option>+237</option><option>+225</option><option>+33</option></select><input type="tel" value={phone} placeholder={labels.phonePlaceholder} onChange={(event) => setPhone(event.target.value)} /></div>{error && <span className="auth-error">{error}</span>}</div>
       <button className="auth-primary" onClick={requestCode}>{labels.receiveCode}</button>
       <button className="auth-email-toggle" onClick={() => setEmailOpen(true)}>{labels.emailToggle}</button>
-    </> : <div className="auth-email-fields">{mode === "signup" && <AuthField label={labels.name} value={name} placeholder={labels.namePlaceholder} onChange={setName} />}<AuthField label={labels.email} value={email} placeholder={labels.emailPlaceholder} onChange={setEmail} /><AuthField label={labels.password} value={password} placeholder={labels.passwordPlaceholder} onChange={setPassword} type="password" /><button className="auth-primary" onClick={signInWithPassword}>{labels.continue}</button>{providers.phone && <button className="auth-email-toggle" onClick={() => setEmailOpen(false)}>{labels.phone}</button>}{error && <span className="auth-error">{error}</span>}</div>}
+    </> : <div className="auth-email-fields">{mode === "signup" && <AuthField label={labels.name} value={name} placeholder={labels.namePlaceholder} onChange={setName} autoComplete="name" />}<AuthField label={labels.email} value={email} placeholder={labels.emailPlaceholder} onChange={setEmail} type="email" autoComplete="email" /><AuthField label={labels.password} value={password} placeholder={labels.passwordPlaceholder} onChange={setPassword} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} /><button className="auth-primary" onClick={signInWithPassword}>{labels.continue}</button>{providers.phone && <button className="auth-email-toggle" onClick={() => setEmailOpen(false)}>{labels.phone}</button>}{error && <span className="auth-error">{error}</span>}</div>}
     </>}
     <p className="auth-fineprint">{labels.fineprint} <Link href={`/${locale}/cgv`}>{labels.terms}</Link> {labels.and} <Link href={`/${locale}/confidentialite`}>{labels.privacy}</Link>.</p>
     <div className="auth-guest">{labels.guest} <Link href={`/${locale}/boutique`}>{labels.continueGuest}</Link></div>
-  </div></div></main>;
+  </div></div></div></main>;
 }
 
-function AuthField({ label, value, placeholder, onChange, type = "text" }: { label: string; value?: string; placeholder: string; onChange?: (value: string) => void; type?: string }) {
-  return <div className="auth-field"><label>{label}</label><input type={type} value={value} placeholder={placeholder} onChange={(event) => onChange?.(event.target.value)} /></div>;
+function AuthField({ label, value, placeholder, onChange, type = "text", autoComplete }: { label: string; value?: string; placeholder: string; onChange?: (value: string) => void; type?: string; autoComplete?: string }) {
+  const id = `auth-${label.toLowerCase().replace(/\W+/g, "-")}`;
+  return <div className="auth-field"><label htmlFor={id}>{label}</label><input id={id} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange?.(event.target.value)} /></div>;
 }

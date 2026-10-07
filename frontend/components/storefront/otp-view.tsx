@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clearOtpChallenge, createOtpChallenge, maskEmail, maskPhone, readOtpChallenge, type OtpChallenge } from "@/lib/auth";
 import { backendRequest, onSignedIn } from "@/lib/backend-api";
+import { AuthAside } from "@/components/storefront/auth-aside";
 
 export function OtpView({ labels }: { labels: Record<string, string> }) {
   const pathname = usePathname();
@@ -15,6 +16,7 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
   const [code, setCode] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const boxes = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     const loadChallenge = window.setTimeout(() => setChallenge(readOtpChallenge()), 0);
@@ -65,11 +67,19 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
     }
   };
 
+  // Saisie fluide : passage automatique à la case suivante, retour arrière et collage du code complet.
+  const typeDigits = (index: number, raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return setCode(code.slice(0, index) + code.slice(index + 1));
+    setCode((code.slice(0, index) + digits + code.slice(index + 1)).slice(0, 6));
+    boxes.current[Math.min(index + digits.length, 5)]?.focus();
+  };
+
   const countdown = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
 
   const expired = !challenge || remaining === 0;
-  return <main className="auth-page"><div className="auth-wrap"><div className="auth-card otp-card">
+  return <main className="auth-page"><div className="auth-split"><AuthAside text="" /><div className="auth-wrap"><div className="auth-card otp-card">
     <Link className="otp-back" href={`/${locale}/compte/connexion`}>← {labels.back}</Link><h1>{labels.verification}</h1>
-    {expired ? <><p className="otp-expired">{labels.expired}</p><button className="auth-primary" onClick={resend} disabled={!challenge || sending}>{labels.resend}</button>{error && <span className="auth-error">{error}</span>}</> : <><p className="otp-message">{labels.sentTo} <strong>{challenge.channel === "email" ? maskEmail(challenge.phone) : maskPhone(challenge.phone)}</strong> <Link href={`/${locale}/compte/connexion`}>{labels.edit}</Link></p><div className="otp-boxes">{Array.from({ length: 6 }, (_, index) => <input key={index} maxLength={1} value={code[index] ?? ""} aria-label={`${labels.code} ${index + 1}`} onChange={(event) => setCode(code.slice(0, index) + event.target.value.replace(/\D/g, "").slice(-1) + code.slice(index + 1))} />)}</div><p className="otp-timer">{labels.resendIn} <strong>{countdown}</strong></p><button className="auth-primary" disabled={code.length !== 6} onClick={verify}>{labels.verify}</button>{error && <span className="auth-error">{error}</span>}</>}
-  </div></div></main>;
+    {expired ? <><p className="otp-expired">{labels.expired}</p><button className="auth-primary" onClick={resend} disabled={!challenge || sending}>{labels.resend}</button>{error && <span className="auth-error">{error}</span>}</> : <><p className="otp-message">{labels.sentTo} <strong>{challenge.channel === "email" ? maskEmail(challenge.phone) : maskPhone(challenge.phone)}</strong> <Link href={`/${locale}/compte/connexion`}>{labels.edit}</Link></p><div className="otp-boxes" onPaste={(event) => { event.preventDefault(); setCode(event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)); boxes.current[5]?.focus(); }}>{Array.from({ length: 6 }, (_, index) => <input key={index} ref={(node) => { boxes.current[index] = node; }} inputMode="numeric" autoComplete={index === 0 ? "one-time-code" : "off"} maxLength={6} value={code[index] ?? ""} aria-label={`${labels.code} ${index + 1}`} onChange={(event) => typeDigits(index, event.target.value)} onKeyDown={(event) => { if (event.key === "Backspace" && !code[index] && index > 0) boxes.current[index - 1]?.focus(); if (event.key === "Enter") void verify(); }} />)}</div><p className="otp-timer">{labels.resendIn} <strong>{countdown}</strong></p><button className="auth-primary" disabled={code.length !== 6} onClick={verify}>{labels.verify}</button>{error && <span className="auth-error">{error}</span>}</>}
+  </div></div></div></main>;
 }
