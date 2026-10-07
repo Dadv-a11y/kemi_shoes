@@ -143,6 +143,39 @@ pm2 save && pm2 startup
 
 Vérification : `curl https://api-kemishoes.nexa-digitallab.com/health` → `{"status":"ok"}`.
 
+### 2.7 Hébergement mutualisé : cPanel › « Setup Node.js App » (Passenger)
+
+| Réglage | Valeur |
+|---|---|
+| Version de Node.js | 22 ou plus (24 testé) |
+| Mode | `Production` |
+| Application root | `apps/kemishoes/api` (dossier du backend) |
+| Application URL | le domaine (ou sous-domaine) de l'API |
+| **Application startup file** | **`app.cjs`** (et non `src/server.js`) |
+| Variables d'environnement | celles du §2.2, dont `LOG_DIR`. Bouton **Save**, puis **Restart** |
+
+- **Pourquoi `app.cjs`** : Passenger charge son fichier de démarrage avec `require()`, impossible pour un projet en ES modules
+  qui utilise `await` au niveau racine. `app.cjs` charge `src/server.js` par `import()` et, si le chargement échoue,
+  écrit la cause (module manquant, configuration invalide, base injoignable) dans `LOG_DIR/kemishoes-fatal.log`.
+- **Ne pas coder de port** : le serveur lit `PORT`, et Passenger redirige l'écoute vers sa propre socket.
+- **Dépendances** : `Run NPM Install` depuis l'interface cPanel (le dossier `node_modules` est un lien vers l'environnement virtuel, c'est normal).
+- **Droits des fichiers** : dossiers `0755`, fichiers `0644`. Les `0777` / `0666` produits par certains outils d'extraction de zip
+  sont refusés par certaines protections d'hébergeur :
+  `cd ~/apps/kemishoes/api && find . -path ./node_modules -prune -o -type d -exec chmod 755 {} + && find . -path ./node_modules -prune -o -type f -exec chmod 644 {} +`
+- **Message « check availability of application has failed » après `Run NPM Install`** : cPanel appelle l'URL de l'application
+  avant puis après l'opération et compare les réponses. Le message veut dire que la réponse « après » était une erreur
+  (code 500 = page d'erreur de Passenger, l'application n'a pas démarré). Il faut alors chercher la cause réelle (ci-dessous) ;
+  `npm start` en console fonctionne même si Passenger échoue, car l'environnement n'est pas le même.
+- **`AH01276: Cannot serve directory …/public_html/<app>/: No matching DirectoryIndex`** (journal d'erreurs cPanel) :
+  à ce moment-là Apache servait le dossier comme un dossier ordinaire, **Passenger n'était pas actif sur cette URL**
+  (application arrêtée, ou `.htaccess` du dossier sans les lignes `Passenger…`). Vérifier que l'application est « Started »
+  dans « Setup Node.js App », et que `public_html/<app>/.htaccess` (fichier caché : activer « Afficher les fichiers cachés »
+  dans les paramètres du gestionnaire de fichiers) contient `PassengerAppRoot`, `PassengerAppType node` et `PassengerStartupFile app.cjs`.
+- **Où lire la cause d'un démarrage raté** : (1) `LOG_DIR/kemishoes-fatal.log` ; (2) `stderr.log` dans le dossier de l'application ;
+  (3) cPanel › Métriques › Erreurs. Si **aucun** de ces fichiers ne contient de ligne datée du démarrage, Passenger n'a pas
+  exécuté `app.cjs` : le nom du fichier de démarrage ou le dossier racine de l'application est mal renseigné.
+- **Vérification finale** : `https://<domaine>/health` → `{"status":"ok"}` et `https://<domaine>/` → « KEMI SHOES API — en ligne. ».
+
 ---
 
 ## 3. Frontend (Next.js en mode standalone)
