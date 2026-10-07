@@ -18,12 +18,12 @@ type Filter = "all" | "inProgress" | "delivered" | "cancelled";
 type User = { id: string; name: string | null; email: string | null; phone: string | null; role?: string; provider: "PASSWORD" | "PHONE_OTP" | "GOOGLE" | "FACEBOOK" };
 type OrderItem = { id: string; productNameFr: string; quantity: number; size: string; unitPriceFcfa: number; imageUrl?: string | null; slugFr?: string | null; slugEn?: string | null };
 
-/** Vignette d'un article commandé : photo du produit (repli : dégradé), lien vers sa fiche. */
-function OrderItemThumb({ item, index, locale, caption }: { item: OrderItem; index: number; locale: Locale; caption: string }) {
+/** Photo d'un article commandé (repli : aplat de couleur), lien vers sa fiche produit. */
+function OrderThumb({ item, locale, size = "md", extra = 0 }: { item: OrderItem; locale: Locale; size?: "md" | "sm"; extra?: number }) {
   const slug = locale === "en" ? item.slugEn : item.slugFr;
-  const content = <>{item.imageUrl && <Image src={resolveMediaUrl(item.imageUrl)} alt={item.productNameFr} fill sizes="(max-width: 760px) 30vw, 160px" />}<span>{caption}</span></>;
-  const className = `product-thumb thumb-${(index % 3) + 1}${item.imageUrl ? " has-image" : ""}`;
-  return slug ? <Link href={`/${locale}/produits/${slug}`} className={className}>{content}</Link> : <div className={className}>{content}</div>;
+  const content = <>{item.imageUrl ? <Image src={resolveMediaUrl(item.imageUrl)} alt={item.productNameFr} fill sizes={size === "sm" ? "64px" : "112px"} /> : <span className="order-thumb-fallback" aria-hidden="true">{item.productNameFr.slice(0, 1)}</span>}{extra > 0 && <span className="order-thumb-more">+{extra}</span>}</>;
+  const className = `order-thumb order-thumb-${size}`;
+  return slug ? <Link href={`/${locale}/produits/${slug}`} className={className} aria-label={item.productNameFr}>{content}</Link> : <div className={className}>{content}</div>;
 }
 type Order = {
   id: string; reference: string; status: string; paymentMethod: string; paymentStatus: string; createdAt: string;
@@ -102,10 +102,14 @@ export function AccountView({ labels, locale = "fr" }: { labels: Labels; locale?
   const filteredOrders = filter === "all" ? orders : orders.filter((order) => orderFilter(order.status) === filter);
   const firstName = user.name?.split(" ")[0];
 
-  return <main className="account-page"><div className="account-shell"><header className="account-hero"><div><span className="eyebrow">KEMI SHOES / {labels.title}</span><h1>{firstName ? `${labels.hello} ${firstName}.` : `${labels.hello}.`}</h1>{/* Accès rapide de l'équipe : back-office ou supervision selon le rôle. */}{user.role === "DEV" ? <Link className="text-link dark-link" href={`/${locale}/supervision`}>Supervision →</Link> : user.role === "ADMIN" || user.role === "PRODUCT_MANAGER" ? <Link className="text-link dark-link" href={`/${locale}/admin`}>Back-office →</Link> : null}</div><div className="account-avatar"><CircleUserRound aria-hidden="true" /></div></header>
+  const initials = (user.name ?? user.email ?? "?").split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+  const counts = { all: orders.length, inProgress: orders.filter((order) => orderFilter(order.status) === "inProgress").length, delivered: orders.filter((order) => orderFilter(order.status) === "delivered").length };
+
+  return <main className="account-page"><div className="account-shell"><header className="account-hero"><div className="account-identity"><div className="account-avatar" aria-hidden="true">{initials}</div><div><span className="eyebrow">KEMI SHOES / {labels.title}</span><h1>{firstName ? `${labels.hello} ${firstName}.` : `${labels.hello}.`}</h1><p className="account-contact">{[user.email, user.phone].filter(Boolean).join(" · ")}</p>{/* Accès rapide de l'équipe : back-office ou supervision selon le rôle. */}{user.role === "DEV" ? <Link className="text-link dark-link" href={`/${locale}/supervision`}>Supervision →</Link> : user.role === "ADMIN" || user.role === "PRODUCT_MANAGER" ? <Link className="text-link dark-link" href={`/${locale}/admin`}>Back-office →</Link> : null}</div></div>
+    <div className="account-stats"><div><strong>{counts.all}</strong><span>{labels.orders}</span></div><div><strong>{counts.inProgress}</strong><span>{labels.inProgress}</span></div><div><strong>{counts.delivered}</strong><span>{labels.delivered}</span></div></div></header>
     {error && <p className="auth-error">{error}</p>}
     <Tabs value={section} onValueChange={setSection} className="account-tabs"><TabsList variant="line" className="account-tabs-list"><TabsTrigger value="orders">{labels.orders}</TabsTrigger><TabsTrigger value="information">{labels.information}</TabsTrigger></TabsList>
-      <TabsContent value="orders" className="account-content"><div className="account-section-heading"><div><span className="section-kicker">02 / 04</span><h2>{labels.orders}</h2></div><span className="account-count">{orders.length} {labels.order}</span></div>
+      <TabsContent value="orders" className="account-content"><div className="account-section-heading"><h2>{labels.orders}</h2><span className="account-count">{filteredOrders.length} {labels.order}</span></div>
         <Tabs value={filter} onValueChange={(value) => setFilter(value as Filter)} className="order-filters"><TabsList variant="line"><TabsTrigger value="all">{labels.all}</TabsTrigger><TabsTrigger value="inProgress">{labels.inProgress}</TabsTrigger><TabsTrigger value="delivered">{labels.delivered}</TabsTrigger><TabsTrigger value="cancelled">{labels.cancelled}</TabsTrigger></TabsList></Tabs>
         <div className="orders-grid">{filteredOrders.map((order) => <OrderCard key={order.id} order={order} locale={locale} labels={labels} onDetails={() => setSelectedOrder(order)} onShare={() => setSharing(order)} />)}{!filteredOrders.length && <div className="account-empty"><Truck aria-hidden="true" /><p>{labels.emptyOrders}</p></div>}</div>
         {selectedOrder && <OrderDetail orderId={selectedOrder.id} locale={locale} labels={labels} onClose={() => setSelectedOrder(null)} />}
@@ -117,7 +121,12 @@ export function AccountView({ labels, locale = "fr" }: { labels: Labels; locale?
 
 function OrderCard({ order, locale, labels, onDetails, onShare }: { order: Order; locale: Locale; labels: Labels; onDetails: () => void; onShare: () => void }) {
   const kind = orderFilter(order.status);
-  return <Card className="order-card"><CardHeader className="order-card-header"><div><CardTitle>{order.reference}</CardTitle><span>{new Date(order.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></div><Badge className={`status-badge status-${kind}`}>{labels[kind]}</Badge></CardHeader><CardContent><div className="order-products">{order.items.slice(0, 3).map((item, index) => <OrderItemThumb key={item.id} item={item} index={index} locale={locale} caption={item.productNameFr} />)}</div><div className="order-card-bottom"><strong>{formatPrice(order.totalFcfa, locale)}</strong><Button variant="ghost" size="sm" onClick={onDetails}>{labels.viewDetails}<ChevronRight data-icon="inline-end" /></Button></div>{kind === "delivered" && <Button variant="outline" size="sm" className="share-order" onClick={onShare}><Share2 data-icon="inline-start" />{labels.reorder}</Button>}</CardContent></Card>;
+  const [first, ...others] = order.items;
+  const shown = order.items.slice(0, 2);
+  const hidden = order.items.length - shown.length;
+  return <Card className="order-card"><div className="order-card-body">{first && <OrderThumb item={first} locale={locale} extra={others.length} />}<div className="order-card-info"><div className="order-card-top"><div><strong className="order-ref">{order.reference}</strong><span>{new Date(order.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></div><Badge className={`status-badge status-${kind}`}>{labels[kind]}</Badge></div>
+    <ul className="order-lines">{shown.map((item) => <li key={item.id}><span className="order-line-name">{item.productNameFr}</span><em>× {item.quantity} · {item.size}</em></li>)}{hidden > 0 && <li className="order-line-more">+{hidden} {labels.items?.toLowerCase()}</li>}</ul></div></div>
+    <div className="order-card-bottom"><strong>{formatPrice(order.totalFcfa, locale)}</strong><div className="order-card-actions">{kind === "delivered" && <Button variant="outline" size="sm" className="share-order" onClick={onShare}><Share2 data-icon="inline-start" />{labels.reorder}</Button>}<Button variant="ghost" size="sm" onClick={onDetails}>{labels.viewDetails}<ChevronRight data-icon="inline-end" /></Button></div></div></Card>;
 }
 
 function OrderDetail({ orderId, locale, labels, onClose }: { orderId: string; locale: Locale; labels: Labels; onClose: () => void }) {
@@ -137,7 +146,7 @@ function OrderDetail({ orderId, locale, labels, onClose }: { orderId: string; lo
   return <div className="account-overlay"><Card className="order-detail"><CardHeader><div><span className="section-kicker">{labels.order}</span><CardTitle>{order?.reference ?? "…"}</CardTitle></div><Button variant="ghost" size="icon" aria-label={labels.close} onClick={onClose}><X /></Button></CardHeader>
     {order ? <CardContent><div className="tracking-title"><Truck aria-hidden="true" /><span>{labels.tracking}</span></div><div className="timeline">{steps.map((step, index) => <div className={`timeline-step ${index < reached ? "is-done" : ""}`} key={step}><span className="timeline-dot">{index < reached ? <Check /> : index + 1}</span><span>{step}</span></div>)}</div>
       {zone && order.status !== "DELIVERED" && order.status !== "CANCELLED" && <p className="eta-note">{zone.etaMinHours}–{zone.etaMaxHours}h · {zone.regionOrCity || zone.country}</p>}
-      <div className="detail-products">{order.items.map((item, index) => <OrderItemThumb key={item.id} item={item} index={index} locale={locale} caption={`${item.productNameFr} × ${item.quantity} (${item.size})`} />)}</div>
+      <ul className="detail-products">{order.items.map((item) => <li key={item.id}><OrderThumb item={item} locale={locale} size="sm" /><div><strong>{item.productNameFr}</strong><span>× {item.quantity} · {item.size}</span></div><b>{formatPrice(item.unitPriceFcfa * item.quantity, locale)}</b></li>)}</ul>
       <div className="detail-list"><div><span>{labels.address}</span><strong>{[order.addressDistrict, order.addressCity].filter(Boolean).join(", ")}</strong></div><div><span>{labels.payment}</span><strong>{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</strong></div><div><span>{labels.paymentStatus}</span><strong>{paymentLabel}</strong></div><div><span>{labels.subtotal}</span><strong>{formatPrice(order.subtotalFcfa, locale)}</strong></div><div><span>{labels.shipping}</span><strong>{formatPrice(order.deliveryFeeFcfa, locale)}</strong></div><div className="detail-total"><span>{labels.total}</span><strong>{formatPrice(order.totalFcfa, locale)}</strong></div></div>
       {order.paymentMethod !== "CASH_ON_DELIVERY" && order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && <Link className="full-button" href={`/${locale}/commande/suivi?order=${order.id}`}>{labels.paymentStatus}</Link>}
       <Button className="full-button" onClick={() => window.open(`https://wa.me/237678666069?text=${encodeURIComponent(`Commande ${order.reference}`)}`, "_blank", "noopener")}><ExternalLink data-icon="inline-start" />{labels.followWhatsApp}</Button><Link className="help-link" href={`/${locale}/mentions-legales`}>{labels.needHelp}</Link></CardContent>
@@ -149,7 +158,7 @@ function SharePanel({ order, locale, labels, onClose }: { order: Order; locale: 
   const item = order.items[0];
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/${locale}/boutique` : "";
   const text = `${item?.productNameFr ?? "KEMI SHOES"} — ${shareUrl}`;
-  return <div className="share-drawer"><div className="share-drawer-header"><div><span className="section-kicker">KEMI / SHARE</span><h3>{labels.shareTitle}</h3></div><Button variant="ghost" size="icon" aria-label={labels.close} onClick={onClose}><X /></Button></div><div className="share-product"><div className="product-thumb thumb-1"><span>{item?.productNameFr}</span></div><div><strong>{item?.productNameFr}</strong><span>{item ? formatPrice(item.unitPriceFcfa, locale) : ""}</span></div></div><div className="share-actions"><Button variant="outline" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener")}><span className="share-icon">W</span>WhatsApp</Button><Button variant="outline" onClick={() => navigator.clipboard?.writeText(shareUrl)}><Copy data-icon="inline-start" />{labels.copyLink}</Button></div></div>;
+  return <div className="share-drawer"><div className="share-drawer-header"><div><span className="section-kicker">KEMI / SHARE</span><h3>{labels.shareTitle}</h3></div><Button variant="ghost" size="icon" aria-label={labels.close} onClick={onClose}><X /></Button></div><div className="share-product">{item ? <OrderThumb item={item} locale={locale} size="sm" /> : null}<div><strong>{item?.productNameFr}</strong><span>{item ? formatPrice(item.unitPriceFcfa, locale) : ""}</span></div></div><div className="share-actions"><Button variant="outline" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener")}><span className="share-icon">W</span>WhatsApp</Button><Button variant="outline" onClick={() => navigator.clipboard?.writeText(shareUrl)}><Copy data-icon="inline-start" />{labels.copyLink}</Button></div></div>;
 }
 
 const emptyAddress: AddressForm = { label: "", fullName: "", phone: "", country: "Cameroun", city: "", district: "", street: "" };
@@ -193,7 +202,7 @@ function InformationPanel({ user, addresses, labels, onUserChange, onAddressesCh
     setForm(address ? { label: address.label ?? "", fullName: address.fullName, phone: address.phone, country: address.country, city: address.city, district: address.district ?? "", street: address.street } : { ...emptyAddress, fullName: user.name ?? "", phone: user.phone ?? "" });
   };
 
-  return <div className="information-layout"><div className="account-section-heading"><div><span className="section-kicker">04 / 04</span><h2>{labels.information}</h2></div><CircleUserRound aria-hidden="true" /></div>
+  return <div className="information-layout"><div className="account-section-heading"><h2>{labels.information}</h2></div>
     {error && <p className="auth-error">{error}</p>}
     <div className="information-grid"><Card><CardHeader><CardTitle>{labels.profile}</CardTitle></CardHeader><CardContent className="profile-fields">
       <EditableField label={labels.name} value={profile.name} onChange={(name) => setProfile((current) => ({ ...current, name }))} />
