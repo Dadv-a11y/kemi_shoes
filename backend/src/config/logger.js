@@ -36,6 +36,9 @@ const options = {
   redact: { paths: REDACT_PATHS, censor: '[REDACTED]' },
 };
 
+/** État de l'écriture fichier, relu au démarrage (server_started) et par l'écran Santé. */
+export const logFileState = { active: false, error: null };
+
 async function buildDestination() {
   if (isTest || !env.LOG_TO_FILE) return process.stdout;
   try {
@@ -47,8 +50,10 @@ async function buildDestination() {
       size: env.LOG_MAX_SIZE,
       mkdir: true,
     });
+    logFileState.active = true;
     return pino.multistream([{ stream: process.stdout }, { stream: fileStream }]);
   } catch (error) {
+    logFileState.error = error.message;
     // Dossier non inscriptible : on continue en console plutôt que d'empêcher le démarrage.
     // eslint-disable-next-line no-console
     console.error(`log_file_unavailable (${LOG_DIR}):`, error.message);

@@ -29,7 +29,7 @@ type Health = {
   memory: { rssMb: number; heapUsedMb: number; heapTotalMb: number };
   system: { loadAverage: number[]; freeMemoryMb: number; totalMemoryMb: number };
   database: { ok: boolean; latencyMs?: number; error?: string };
-  logs: { directory: string; files: number; totalSizeMb: number; retentionDays: number; maxFileSize: string; level: string };
+  logs: { directory: string; fileLogging: boolean; fileError: string | null; directoryFromEnv: boolean; files: number; totalSizeMb: number; retentionDays: number; maxFileSize: string; level: string };
   integrations: { sms: string; whatsapp: string; alertEmails: string; frontendIngestKey: boolean };
   requests: { series: MinuteStat[]; last15: Summary; last60: Summary };
   slowRequestMs: number;
@@ -391,7 +391,12 @@ function HealthPanel() {
           <StatusLabel level={errorLevel}>{last15.errors === 0 ? "Aucune erreur serveur" : `${(last15.errorRate * 100).toFixed(1)} % des requêtes`}</StatusLabel> · {last15.clientErrors} réponse(s) 4xx
         </Tile>
         <Tile label="Mémoire du processus" value={`${health.memory.rssMb} Mo`}>Tas {health.memory.heapUsedMb} / {health.memory.heapTotalMb} Mo · charge {health.system.loadAverage.join(" / ")}</Tile>
-        <Tile label="Fichiers de log" value={`${health.logs.totalSizeMb} Mo`}>{health.logs.files} fichier(s) · conservation {health.logs.retentionDays} j · rotation quotidienne ou {health.logs.maxFileSize}</Tile>
+        <Tile label="Fichiers de log" value={`${health.logs.totalSizeMb} Mo`}>
+          {health.logs.files} fichier(s) · conservation {health.logs.retentionDays} j · rotation quotidienne ou {health.logs.maxFileSize}
+          <div className="mt-1 break-all font-mono text-[10.5px]" title="Dossier des logs (LOG_DIR)">{health.logs.directory}</div>
+          {!health.logs.fileLogging && <StatusLabel level="critical">Écriture fichier inactive{health.logs.fileError ? ` : ${health.logs.fileError}` : ""}</StatusLabel>}
+          {health.logs.fileLogging && !health.logs.directoryFromEnv && <StatusLabel level="warning">LOG_DIR non défini : dossier de l’application</StatusLabel>}
+        </Tile>
         <Tile label="Envoi des codes OTP" value={health.integrations.sms === "none" ? "Non branché" : health.integrations.sms}>WhatsApp : {health.integrations.whatsapp}</Tile>
         <Tile label="Alertes e-mail" value={health.integrations.alertEmails}>Erreurs Next remontées : {health.integrations.frontendIngestKey ? "oui (clé configurée)" : "non (LOG_INGEST_KEY absente)"}</Tile>
       </div>

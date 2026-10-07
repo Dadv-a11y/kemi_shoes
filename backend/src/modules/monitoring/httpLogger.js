@@ -23,7 +23,8 @@ export const httpLogger = pinoHttp({
     res.setHeader('X-Request-Id', id);
     return id;
   },
-  autoLogging: { ignore: (req) => req.method === 'OPTIONS' || req.url === '/health' },
+  // /health et / : sondes de supervision (cPanel, Passenger) appelées toutes les quelques minutes.
+  autoLogging: { ignore: (req) => req.method === 'OPTIONS' || req.url === '/health' || req.url === '/' },
   customLogLevel(req, res, err) {
     if (err || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';

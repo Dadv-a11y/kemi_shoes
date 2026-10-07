@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { env } from '../../config/env.js';
-import { LOG_DIR } from '../../config/logger.js';
+import { LOG_DIR, logFileState } from '../../config/logger.js';
 import { all, get } from '../../db/client.js';
 import { getSmsProvider, getWhatsappProvider } from '../notifications/sms/sms.factory.js';
 import { listLogFiles } from './logMaintenance.js';
@@ -36,6 +36,9 @@ export async function getHealth() {
     database,
     logs: {
       directory: LOG_DIR,
+      fileLogging: logFileState.active,
+      fileError: logFileState.error,
+      directoryFromEnv: Boolean(process.env.LOG_DIR),
       files: files.length,
       totalSizeMb: Math.round(files.reduce((total, file) => total + file.size, 0) / 10485.76) / 100,
       retentionDays: env.LOG_RETENTION_DAYS,
