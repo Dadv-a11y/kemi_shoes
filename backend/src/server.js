@@ -6,7 +6,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import path from "node:path";
 import { env } from "./config/env.js";
-import { logger, logFatalSync } from "./config/logger.js";
+import { logger, logFatalSync, logFileState, LOG_DIR } from "./config/logger.js";
 import { httpLogger, requestStatsMiddleware } from "./modules/monitoring/httpLogger.js";
 import { scheduleLogMaintenance } from "./modules/monitoring/logMaintenance.js";
 import { reportAlert } from "./modules/monitoring/alerts.js";
@@ -49,6 +49,9 @@ app.use(requireTrustedOrigin(allowedOrigins));
 app.use(metricsMiddleware);
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
+// Page d'accueil de l'API : l'hébergeur (cPanel « Setup Node.js App », Passenger) vérifie la
+// disponibilité en appelant « / » et attend une réponse 200 de type text/html.
+app.get("/", (req, res) => res.type("html").send("<!doctype html><title>KEMI SHOES API</title><p>KEMI SHOES API — en ligne.</p>"));
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 // Métriques Prometheus : réservées aux administrateurs (Bearer d'un compte ADMIN).
 app.get("/metrics", requireAuth, requireRole("ADMIN"), async (req, res) => {
@@ -96,7 +99,12 @@ if (process.env.NODE_ENV !== "test") {
   openDb()
     .then(() =>
       app.listen(env.PORT, () => {
-        logger.info({ port: env.PORT, node: process.version, env: env.NODE_ENV }, "server_started");
+        logger.info({ port: env.PORT, node: process.version, env: env.NODE_ENV, logDir: LOG_DIR, logToFile: logFileState.active }, "server_started");
+        // Sans LOG_DIR, les fichiers partent dans <dossier de l'application>/logs, effacé à chaque déploiement.
+        if (env.NODE_ENV === "production" && !process.env.LOG_DIR) {
+          logger.warn({ logDir: LOG_DIR }, "LOG_DIR non défini : logs écrits dans le dossier de l'application (définir un chemin absolu hors de l'application)");
+        }
+        if (logFileState.error) logger.warn({ logDir: LOG_DIR, error: logFileState.error }, "log_file_unavailable : logs en console uniquement");
         scheduleLogMaintenance();
       }),
     )

@@ -100,6 +100,14 @@ async function sessionFor(role) {
   return { email, cookie: login.headers['set-cookie'].map((value) => value.split(';')[0]).join('; '), id: register.body.user.id };
 }
 
+describe('sondes de disponibilité', () => {
+  test('« / » répond 200 en text/html (vérification cPanel/Passenger)', async () => {
+    const response = await request(app).get('/');
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toMatch(/^text\/html/);
+  });
+});
+
 describe('API de supervision', () => {
   test('réservée au rôle DEV (ADMIN refusé, invité refusé)', async () => {
     await writeLog('kemishoes.2026-01-11.1.log', [{ level: 'info', time: new Date().toISOString(), msg: 'courant' }]);
@@ -111,7 +119,7 @@ describe('API de supervision', () => {
     expect(logs.status).toBe(200);
     expect(logs.body.items[0].msg).toBe('courant');
     const health = await request(app).get('/api/v1/monitoring/health').set('Cookie', dev.cookie);
-    expect(health.body).toMatchObject({ database: { ok: true }, logs: { retentionDays: 14 } });
+    expect(health.body).toMatchObject({ database: { ok: true }, logs: { retentionDays: 14, directory: LOG_DIR, fileLogging: false } });
     expect((await request(app).get('/api/v1/monitoring/audit').set('Cookie', dev.cookie)).status).toBe(200);
   });
 
