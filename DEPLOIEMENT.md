@@ -184,8 +184,10 @@ Vérification : `curl https://api-kemishoes.nexa-digitallab.com/health` → `{"s
   cd ~/apps/kemishoes/api && npm run check:install
   ```
   Le contrôle liste chaque paquet défaillant et les commandes de réparation (`rm -rf node_modules/<paquet>` puis
-  `npm install --omit=dev`). Ne supprimez jamais `node_modules` lui-même (c'est un lien vers l'environnement virtuel) :
-  utilisez « Run NPM Install » si le lien est cassé.
+  `npm install --omit=dev`).
+  **Réparation complète validée en production** (installation interrompue ou incohérente) : envoyer les fichiers à jour,
+  purger le cache npm (`npm cache clean --force`), supprimer le dossier/lien `node_modules`, puis « Run NPM Install »
+  dans « Setup Node.js App » (cPanel recrée le lien vers l'environnement virtuel) → « NPM Install completed successfully ».
 - **Vérification finale** : `https://<domaine>/health` → `{"status":"ok"}` et `https://<domaine>/` → « KEMI SHOES API — en ligne. ».
 
 ---
