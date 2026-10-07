@@ -15,6 +15,7 @@
     "user:make-admin": "node scripts/make-admin.js",
     "user:set-role": "node scripts/set-role.js",
     "check:install": "node scripts/check-install.js",
+    "images:to-webp": "node scripts/images-to-webp.js",
     "db:seed": "node scripts/seed-demo.js"
   },
   "license": "UNLICENSED",
@@ -49,5 +50,8 @@
   "allowScripts": {
     "@parcel/watcher@2.6.0": true,
     "unrs-resolver@1.12.2": true
+  },
+  "optionalDependencies": {
+    "sharp": "^0.35.5"
   }
 }

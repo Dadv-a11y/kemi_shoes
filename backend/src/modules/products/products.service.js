@@ -24,11 +24,17 @@ async function getRelations(productId) {
 // Les indicateurs sont stockés en INTEGER (0/1) : l'API les expose en booléens,
 // format attendu par le schéma de mise à jour (sinon le back-office, qui renvoie
 // le produit tel que lu, voyait chaque modification refusée en 400).
+/** Durée pendant laquelle un produit récemment ajouté est présenté comme « Nouveautés ». */
+export const NEW_PRODUCT_DAYS = 14;
+const newSince = () => new Date(Date.now() - NEW_PRODUCT_DAYS * 24 * 60 * 60 * 1000).toISOString();
+const isRecent = (createdAt) => new Date(createdAt).getTime() >= Date.now() - NEW_PRODUCT_DAYS * 24 * 60 * 60 * 1000;
+
 async function hydrate(product) {
   if (!product) return null;
   const { images, colors, sizes } = await getRelations(product.id);
   return {
     ...product,
+    isNew: isRecent(product.createdAt),
     colorCustomizable: Boolean(product.colorCustomizable),
     materialCustomizable: Boolean(product.materialCustomizable),
     images: images.map((image) => ({ ...image, isMain: Boolean(image.isMain) })),
@@ -53,7 +59,8 @@ async function syncToMerchantSafely(product, relations) {
 export async function listProducts({ category, status, page = 1, pageSize = 20 } = {}) {
   const conditions = [];
   const params = [];
-  if (category) { conditions.push('category = ?'); params.push(category); }
+  if (category === 'Nouveautes') { conditions.push('createdAt >= ?'); params.push(newSince()); }
+  else if (category) { conditions.push('category = ?'); params.push(category); }
   if (status) { conditions.push('status = ?'); params.push(status); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 

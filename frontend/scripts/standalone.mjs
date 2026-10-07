@@ -16,4 +16,6 @@ if (!existsSync(path.join(standalone, "server.js"))) {
 cpSync(path.join(root, "public"), path.join(standalone, "public"), { recursive: true });
 cpSync(path.join(root, ".next", "static"), path.join(standalone, ".next", "static"), { recursive: true });
 
+cpSync(path.join(root, "scripts", "passenger-app.cjs"), path.join(standalone, "app.cjs"));
+
 console.log("✔ Build standalone prêt : .next/standalone (démarrage : node server.js)");

@@ -184,8 +184,10 @@ Vérification : `curl https://api-kemishoes.nexa-digitallab.com/health` → `{"s
   cd ~/apps/kemishoes/api && npm run check:install
   ```
   Le contrôle liste chaque paquet défaillant et les commandes de réparation (`rm -rf node_modules/<paquet>` puis
-  `npm install --omit=dev`). Ne supprimez jamais `node_modules` lui-même (c'est un lien vers l'environnement virtuel) :
-  utilisez « Run NPM Install » si le lien est cassé.
+  `npm install --omit=dev`).
+  **Réparation complète validée en production** (installation interrompue ou incohérente) : envoyer les fichiers à jour,
+  purger le cache npm (`npm cache clean --force`), supprimer le dossier/lien `node_modules`, puis « Run NPM Install »
+  dans « Setup Node.js App » (cPanel recrée le lien vers l'environnement virtuel) → « NPM Install completed successfully ».
 - **Vérification finale** : `https://<domaine>/health` → `{"status":"ok"}` et `https://<domaine>/` → « KEMI SHOES API — en ligne. ».
 
 ---
@@ -531,3 +533,57 @@ Préfixe : `/api/v1`. 🔒 = token requis, 👑 = ADMIN / PRODUCT_MANAGER, 👑�
 | 🛠 `GET /monitoring/logs`, `/logs/files`, `/logs/files/:name`, `/health`, `/audit` ; `DELETE /logs/files/:name` ; `POST /logs/purge` *(nouvelles)* | Supervision (rôle DEV) |
 | `POST /monitoring/client-errors` *(nouvelle)* | Remontée des erreurs navigateur et serveur Next |
 | `POST /auth/logout`, `POST /auth/logout-all` *(nouvelles)* | Compte › Se déconnecter (révocation de la session côté serveur) |
+
+## 8. Frontend sur cPanel (build préparé hors du serveur)
+
+Le build Next.js lance plusieurs processus parallèles que certains hébergeurs mutualisés tuent.
+`next.config.ts` force un seul processus (`cpus: 1`, `workerThreads: false`), et le build se fait
+ailleurs (Linux x64, ex. cet environnement ou une VM/WSL) puis s'envoie en zip.
+
+1. **Construire** (depuis `frontend/`, sous Linux ou WSL — le dossier embarque `sharp`, binaire natif) :
+   ```bash
+   export NEXT_PUBLIC_BACKEND_API_URL=https://api-kemishoes.nexa-digitallab.com/api/v1
+   export BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
+   npm ci && npm run build:standalone
+   cd .next/standalone && zip -r ../../kemishoes-frontend.zip .
+   ```
+   `NEXT_PUBLIC_BACKEND_API_URL` est figée dans le JS au build : changer d'URL d'API impose de reconstruire.
+2. **cPanel › Setup Node.js App › Create Application** : Node 20+, mode *Production*, racine
+   `kemishoes-front`, URL du site, fichier de démarrage **`app.cjs`**.
+3. Supprimer tout lien `node_modules` créé par cPanel, extraire le zip dans la racine de l'application
+   (le zip contient son propre `node_modules` : **ne pas** cliquer sur « Run NPM Install »).
+4. Variables d'environnement : `NODE_ENV=production`, `BACKEND_API_URL`, `LOG_INGEST_KEY`. Sauvegarder puis **Restart**.
+5. Côté API (cPanel › Setup Node.js App du backend) : `CORS_ORIGINS` = origine exacte du site, sans `/` final
+   (ex. `https://kemishoes.nexa-digitallab.com`), plus `FRONTEND_URL`. Plusieurs origines : séparées par des virgules.
+   Après modification : **Restart**. Une origine refusée est journalisée (`cors_origin_rejected`).
+6. Sites sur deux sous-domaines du même domaine (`kemishoes.` et `api-kemishoes.nexa-digitallab.com`) :
+   les cookies de session fonctionnent avec `COOKIE_SAMESITE=lax` et `COOKIE_DOMAIN=.nexa-digitallab.com`.
+
+### Images produits en WebP
+
+Les images envoyées depuis l'admin sont converties en WebP (1600 px max) par l'API (`sharp`, dépendance
+optionnelle). Pour les images déjà en ligne : `npm run images:to-webp -- --dry-run` puis `npm run images:to-webp`
+dans le dossier de l'API (les URLs en base sont mises à jour).
+
+
+## 9. E-mails (SMTP) et vérification de l'adresse
+
+Les e-mails partent par SMTP (variables `SMTP_*` de « Setup Node.js App », puis **Restart**). Sur cPanel :
+`SMTP_HOST=mail.<votre-domaine>`, `SMTP_PORT=465` + `SMTP_SECURE=true` (ou 587 + `false`), `SMTP_USER` = l'adresse
+complète de la boîte créée dans cPanel › Comptes de messagerie, `SMTP_PASS` = son mot de passe, `SMTP_FROM` = la même adresse
+(`KEMI SHOES <no-reply@<votre-domaine>>`).
+
+**Vérifier que c'est branché** — dans le journal `kemishoes.<date>.<n>.log`, au démarrage :
+- `smtp_ready` : connexion et authentification réussies ;
+- `smtp_not_configured` : `SMTP_HOST` absent, **aucun e-mail n'est envoyé** (les messages sont seulement écrits dans les logs : `email_not_sent_smtp_not_configured`) ;
+- `smtp_unreachable` : le serveur répond mal ; le champ `code` donne la cause (`EAUTH` identifiants, `ECONNECTION`/`ETIMEDOUT` hôte ou port, `ESOCKET` TLS : essayer 465 + `true` ou 587 + `false`).
+
+Chaque envoi échoué est ensuite journalisé (`email_send_failed`, avec l'hôte, le code d'erreur et la réponse du serveur). Dans
+**Supervision › Santé**, la tuile « Serveur SMTP » affiche la configuration en vigueur (jamais le mot de passe), et
+`POST /api/v1/monitoring/smtp-test` (rôle DEV, corps `{"to":"vous@exemple.com"}`) teste la connexion et envoie un message d'essai.
+
+**Vérification de l'adresse** : à l'inscription (et à la connexion d'un compte jamais confirmé), un code à 6 chiffres est envoyé
+par e-mail ; aucune session n'est ouverte tant qu'il n'est pas saisi sur la page de vérification. Un nouveau code n'est émis qu'après
+expiration du précédent (`OTP_TTL_MINUTES`, 5 min). Sans SMTP en production, l'inscription par e-mail répond 503 (`EMAIL_UNAVAILABLE`).
+Les comptes créés avant cette fonction doivent confirmer leur adresse à la prochaine connexion ; `npm run user:set-role` et
+`npm run user:make-admin` marquent l'adresse comme vérifiée (à utiliser pour les comptes ADMIN/DEV si le SMTP n'est pas encore prêt).

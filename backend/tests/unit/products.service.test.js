@@ -100,3 +100,26 @@ describe('products.service', () => {
     expect(parsed.success).toBe(true);
   });
 });
+
+describe('Nouveautés (automatiques)', () => {
+  const base = { nameFr: 'Mule', nameEn: 'Mule', descriptionFr: 'Cuir', descriptionEn: 'Leather', category: 'Homme', price: 25000, status: 'active' };
+
+  test('un produit est « nouveau » 14 jours après sa création, puis retrouve sa vraie catégorie', async () => {
+    const { run } = await import('../../src/db/client.js');
+    const recent = await createProduct({ ...base, nameFr: 'Récent', nameEn: 'Recent' });
+    const old = await createProduct({ ...base, nameFr: 'Ancien', nameEn: 'Old' });
+    await run(`UPDATE Product SET createdAt = ? WHERE id = ?`, [new Date(Date.now() - 15 * 86400000).toISOString(), old.id]);
+
+    const news = await listProducts({ category: 'Nouveautes', status: 'active' });
+    expect(news.items.map((item) => item.id)).toEqual([recent.id]);
+    expect(news.items[0]).toMatchObject({ isNew: true, category: 'Homme' });
+
+    const men = await listProducts({ category: 'Homme', status: 'active' });
+    expect(men.items.find((item) => item.id === old.id)).toMatchObject({ isNew: false, category: 'Homme' });
+  });
+
+  test('« Nouveautes » n’est pas une catégorie enregistrable', async () => {
+    const { createProductSchema } = await import('../../src/modules/products/products.schema.js');
+    expect(createProductSchema.shape.body.safeParse({ ...base, category: 'Nouveautes' }).success).toBe(false);
+  });
+});

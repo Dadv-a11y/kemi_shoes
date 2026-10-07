@@ -17,7 +17,8 @@ try {
     console.error(`Aucun compte trouvé pour ${identifier}. Créez d'abord le compte depuis le site.`);
     process.exitCode = 1;
   } else {
-    await run(`UPDATE User SET role = ? WHERE id = ?`, [role, user.id]);
+    // Rôle attribué par l'opérateur du serveur : l'adresse e-mail est considérée comme vérifiée.
+    await run(`UPDATE User SET role = ?, emailVerified = CASE WHEN email IS NOT NULL THEN 1 ELSE emailVerified END WHERE id = ?`, [role, user.id]);
     await revokeAllSessions(user.id); // le rôle est inscrit dans le jeton : reconnexion nécessaire
     console.log(`✔ ${user.name ?? identifier} a maintenant le rôle ${role} (reconnexion nécessaire).`);
   }

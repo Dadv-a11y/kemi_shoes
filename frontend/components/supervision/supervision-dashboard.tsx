@@ -30,7 +30,7 @@ type Health = {
   system: { loadAverage: number[]; freeMemoryMb: number; totalMemoryMb: number };
   database: { ok: boolean; latencyMs?: number; error?: string };
   logs: { directory: string; fileLogging: boolean; fileError: string | null; directoryFromEnv: boolean; files: number; totalSizeMb: number; retentionDays: number; maxFileSize: string; level: string };
-  integrations: { sms: string; whatsapp: string; alertEmails: string; frontendIngestKey: boolean };
+  integrations: { smtp?: { configured: boolean; host: string | null; port: number; secure: boolean; user: string | null; hasPassword: boolean }; sms: string; whatsapp: string; alertEmails: string; frontendIngestKey: boolean };
   requests: { series: MinuteStat[]; last15: Summary; last60: Summary };
   slowRequestMs: number;
 };
@@ -398,6 +398,9 @@ function HealthPanel() {
           {health.logs.fileLogging && !health.logs.directoryFromEnv && <StatusLabel level="warning">LOG_DIR non défini : dossier de l’application</StatusLabel>}
         </Tile>
         <Tile label="Envoi des codes OTP" value={health.integrations.sms === "none" ? "Non branché" : health.integrations.sms}>WhatsApp : {health.integrations.whatsapp}</Tile>
+        <Tile label="Serveur SMTP (e-mails)" value={health.integrations.smtp?.configured ? health.integrations.smtp.host ?? "" : "Non configuré"}>
+          {health.integrations.smtp?.configured ? `Port ${health.integrations.smtp.port}${health.integrations.smtp.secure ? " (TLS)" : " (STARTTLS)"} · compte ${health.integrations.smtp.user ?? "sans authentification"}${health.integrations.smtp.hasPassword ? "" : " · mot de passe absent"}` : "Aucun e-mail n'est envoyé (codes de vérification, commandes). Définir SMTP_HOST, SMTP_USER, SMTP_PASS."}
+        </Tile>
         <Tile label="Alertes e-mail" value={health.integrations.alertEmails}>Erreurs Next remontées : {health.integrations.frontendIngestKey ? "oui (clé configurée)" : "non (LOG_INGEST_KEY absente)"}</Tile>
       </div>
       <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[#E4DDD5] bg-white p-4">

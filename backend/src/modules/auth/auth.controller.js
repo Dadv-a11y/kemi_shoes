@@ -11,13 +11,26 @@ function respondWithSession(res, { accessToken, refreshToken, user }, status = 2
 
 export async function register(req, res) {
   const result = await authService.registerWithPassword(req.body);
+  if (result.verificationRequired) return res.status(202).json(result);
   audit(req, { action: 'auth.register', entityType: 'User', entityId: result.user.id, actor: result.user });
   respondWithSession(res, result, 201);
 }
 
 export async function login(req, res) {
   const result = await authService.loginWithPassword(req.body);
+  if (result.verificationRequired) return res.status(202).json(result);
   audit(req, { action: 'auth.login', entityType: 'User', entityId: result.user.id, actor: result.user });
+  respondWithSession(res, result);
+}
+
+export async function resendEmailCode(req, res) {
+  const { expiresAt } = await authService.resendEmailVerification(req.body.email);
+  res.json({ message: 'Si ce compte attend une vérification, un code a été envoyé.', expiresAt: expiresAt ?? null });
+}
+
+export async function verifyEmailCode(req, res) {
+  const result = await authService.verifyEmailAndAuthenticate(req.body);
+  audit(req, { action: 'auth.email_verified', entityType: 'User', entityId: result.user.id, actor: result.user });
   respondWithSession(res, result);
 }
 

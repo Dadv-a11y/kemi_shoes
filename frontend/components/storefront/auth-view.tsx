@@ -64,7 +64,14 @@ export function AuthView({ locale, labels }: { locale: "fr" | "en"; labels: Labe
     if (mode === "signup" && !name.trim()) return setError(labels.required);
     setError("");
     try {
-      const { user } = await backendRequest<{ user: { role: string } }>(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", body: JSON.stringify(mode === "login" ? { email, password } : { name: name.trim(), email, password }) });
+      const result = await backendRequest<{ user?: { role: string }; verificationRequired?: boolean; expiresAt?: string }>(mode === "login" ? "/auth/login" : "/auth/register", { method: "POST", body: JSON.stringify(mode === "login" ? { email, password } : { name: name.trim(), email, password }) });
+      // Adresse e-mail à confirmer : un code vient d'être envoyé, aucune session n'est encore ouverte.
+      if (result.verificationRequired) {
+        createOtpChallenge(email, mode, name.trim() || undefined, result.expiresAt, "email");
+        router.push(`/${locale}/compte/verification`);
+        return;
+      }
+      const user = result.user as { role: string };
       onSignedIn();
       // L'équipe technique arrive directement sur la supervision.
       router.push(user.role === "DEV" ? `/${locale}/supervision` : `/${locale}/compte`);

@@ -50,7 +50,7 @@ export const PRODUCTS = {
     nameFr: 'Mule à bride asymétrique — modèle 2', nameEn: 'Asymmetric strap mule — model 2',
     descriptionFr: 'Variante de notre mule à bride asymétrique, avec une découpe revisitée.',
     descriptionEn: 'A variation of our asymmetric strap mule with a reworked cut.',
-    category: 'Nouveautes', price: 24000, colors: [C.camel, C.noir], sizes: FEMME_SIZES,
+    category: 'Femme', price: 24000, colors: [C.camel, C.noir], sizes: FEMME_SIZES,
   },
   'mule_à_bride_diagonale_et_boucle': {
     nameFr: 'Mule à bride diagonale et boucle', nameEn: 'Diagonal strap mule with buckle',
@@ -74,7 +74,7 @@ export const PRODUCTS = {
     nameFr: 'Mule à brides croisées motif serpent et orange', nameEn: 'Snake print and orange crossed strap mule',
     descriptionFr: 'Brides croisées mêlant cuir imprimé serpent et cuir orange : la pièce forte de la saison.',
     descriptionEn: 'Crossed straps mixing snake-print and orange leather: the statement piece of the season.',
-    category: 'Nouveautes', price: 30000, colors: [C.orange, C.camel], sizes: FEMME_SIZES,
+    category: 'Femme', price: 30000, colors: [C.orange, C.camel], sizes: FEMME_SIZES,
   },
   'mule_à_double_boucle_découpée': {
     nameFr: 'Mule à double boucle découpée', nameEn: 'Cut-out double buckle mule',
@@ -104,7 +104,7 @@ export const PRODUCTS = {
     nameFr: 'Mule en denim à large bande et boucle dorée', nameEn: 'Denim wide band mule with gold buckle',
     descriptionFr: 'Large bande en denim et boucle métallique dorée : une mule décontractée et élégante.',
     descriptionEn: 'Wide denim band and gold metal buckle: a relaxed yet elegant mule.',
-    category: 'Nouveautes', price: 26000, colors: [C.denim, C.dore], sizes: MIXTE_SIZES,
+    category: 'Femme', price: 26000, colors: [C.denim, C.dore], sizes: MIXTE_SIZES,
   },
   'Mule_entredoigt': {
     nameFr: 'Mule entre-doigt', nameEn: 'Toe post mule',
@@ -122,7 +122,7 @@ export const PRODUCTS = {
     nameFr: 'Mule entre-doigt à carreaux et semelle épaisse', nameEn: 'Checked toe post mule with thick sole',
     descriptionFr: 'Motif à carreaux et semelle épaisse : confort et allure affirmée.',
     descriptionEn: 'Checked pattern and thick sole: comfort with a bold look.',
-    category: 'Nouveautes', price: 27000, colors: [C.noir, C.blanc], sizes: FEMME_SIZES,
+    category: 'Femme', price: 27000, colors: [C.noir, C.blanc], sizes: FEMME_SIZES,
   },
   'mule_entredoigt_couvrante_en_cuir_tressé': {
     nameFr: 'Mule entre-doigt couvrante en cuir tressé', nameEn: 'Woven leather covered toe post mule',
@@ -140,7 +140,7 @@ export const PRODUCTS = {
     nameFr: 'Mule jaune à bague d’orteil et large bande', nameEn: 'Yellow toe ring mule with wide band',
     descriptionFr: 'Une touche de couleur : cuir jaune, large bande et bague d’orteil.',
     descriptionEn: 'A pop of colour: yellow leather, wide band and toe ring.',
-    category: 'Nouveautes', price: 23000, colors: [C.jaune], sizes: FEMME_SIZES,
+    category: 'Femme', price: 23000, colors: [C.jaune], sizes: FEMME_SIZES,
   },
   'mule_plateforme_à_nœud_et_fines_brides': {
     nameFr: 'Mule plateforme à nœud et fines brides', nameEn: 'Platform mule with bow and thin straps',
@@ -176,7 +176,7 @@ export const PRODUCTS = {
     nameFr: 'Sandales à bague d’orteil', nameEn: 'Toe ring sandals',
     descriptionFr: 'Élégantes et légères, en cuir souple avec bague d’orteil.',
     descriptionEn: 'Elegant and light, in soft leather with a toe ring.',
-    category: 'Nouveautes', price: 26000, colors: [C.cognac, C.terracotta], sizes: FEMME_SIZES,
+    category: 'Femme', price: 26000, colors: [C.cognac, C.terracotta], sizes: FEMME_SIZES,
   },
 
   // --- Photos prises à l'atelier (anciennes séries « photo_… », renommées par modèle) ---
@@ -220,7 +220,7 @@ export const PRODUCTS = {
     nameFr: 'Mule à brides croisées motif géométrique multicolore', nameEn: 'Multicolour geometric crossed strap mule',
     descriptionFr: 'Brides croisées en tissu tissé aux motifs géométriques vifs, sur semelle en cuir chocolat.',
     descriptionEn: 'Crossed straps in a woven fabric with bold geometric patterns, on a chocolate leather sole.',
-    category: 'Nouveautes', price: 26000, colors: [C.multicolore, C.chocolat], sizes: MIXTE_SIZES,
+    category: 'Femme', price: 26000, colors: [C.multicolore, C.chocolat], sizes: MIXTE_SIZES,
   },
   'mule_à_découpe_H_dorée_métallisée': {
     nameFr: 'Mule à découpe H dorée métallisée', nameEn: 'Metallic gold H cut-out mule',
@@ -256,7 +256,7 @@ export const PRODUCTS = {
     nameFr: 'Mule à brides croisées jaune et bleu ciel', nameEn: 'Yellow and sky blue crossed strap mule',
     descriptionFr: 'Brides croisées jaune et bleu ciel sur semelle à tranche orange : une paire pleine de soleil.',
     descriptionEn: 'Yellow and sky blue crossed straps on an orange-edged sole: a sunny pair.',
-    category: 'Nouveautes', price: 24000, colors: [C.jaune, C.bleuCiel, C.orange], sizes: FEMME_SIZES,
+    category: 'Femme', price: 24000, colors: [C.jaune, C.bleuCiel, C.orange], sizes: FEMME_SIZES,
   },
   'mule_à_brides_croisées_en_cuir_tressé_noir': {
     nameFr: 'Mule à brides croisées en cuir tressé noir', nameEn: 'Black woven leather crossed strap mule',
@@ -280,7 +280,7 @@ export const PRODUCTS = {
     nameFr: 'Mule plateforme à double boucle en cuir grainé', nameEn: 'Grained leather double buckle platform mule',
     descriptionFr: 'Deux brides en cuir grainé noir à boucles sur une semelle plateforme claire.',
     descriptionEn: 'Two black grained leather buckled straps on a light platform sole.',
-    category: 'Nouveautes', price: 32000, colors: [C.noir, C.blanc], sizes: MIXTE_SIZES,
+    category: 'Femme', price: 32000, colors: [C.noir, C.blanc], sizes: MIXTE_SIZES,
   },
   'mule_à_découpe_H_chocolat': {
     nameFr: 'Mule à découpe H chocolat', nameEn: 'Chocolate H cut-out mule',
@@ -310,7 +310,7 @@ export const PRODUCTS = {
     nameFr: 'Mule à bande et barrettes dorées', nameEn: 'Band mule with gold bars',
     descriptionFr: 'Bande en cuir corail ou bordeaux traversée de barrettes dorées sur le côté.',
     descriptionEn: 'Coral or burgundy leather band crossed by gold bars on the side.',
-    category: 'Nouveautes', price: 27000, colors: [C.corail, C.bordeaux], sizes: FEMME_SIZES,
+    category: 'Femme', price: 27000, colors: [C.corail, C.bordeaux], sizes: FEMME_SIZES,
   },
   'mule_en_daim_beige_à_découpe_ajourée': {
     nameFr: 'Mule en daim beige à découpe ajourée', nameEn: 'Beige suede mule with cut-out',
@@ -334,7 +334,7 @@ export const PRODUCTS = {
     nameFr: 'Mule à brides croisées personnalisée en tissu bleu', nameEn: 'Personalised blue fabric crossed strap mule',
     descriptionFr: 'Brides croisées en tissu teint bleu, brodées au prénom de votre choix.',
     descriptionEn: 'Crossed straps in blue dyed fabric, embroidered with the name of your choice.',
-    category: 'Nouveautes', price: 32000, colors: [C.bleu, C.noir], sizes: MIXTE_SIZES,
+    category: 'Femme', price: 32000, colors: [C.bleu, C.noir], sizes: MIXTE_SIZES,
   },
   'sandale_à_brides_blanches_et_bride_arrière': {
     nameFr: 'Sandale à brides blanches et bride arrière', nameEn: 'White strap sandal with back strap',
@@ -352,13 +352,13 @@ export const PRODUCTS = {
     nameFr: 'Mule à brides croisées léopard et bronze', nameEn: 'Leopard and bronze crossed strap mule',
     descriptionFr: 'Une bride imprimé léopard croisée avec une bride en cuir bronze métallisé.',
     descriptionEn: 'A leopard-print strap crossed with a metallic bronze leather strap.',
-    category: 'Nouveautes', price: 27000, colors: [C.camel, C.chocolat], sizes: FEMME_SIZES,
+    category: 'Femme', price: 27000, colors: [C.camel, C.chocolat], sizes: FEMME_SIZES,
   },
   'slip_on_en_tissu_bleu_à_bout_rouge': {
     nameFr: 'Slip-on en tissu bleu à bout rouge', nameEn: 'Blue fabric slip-on with red toe cap',
     descriptionFr: 'Chaussure slip-on en tissu teint bleu et blanc, bout et semelle rouges.',
     descriptionEn: 'Slip-on shoe in blue and white dyed fabric with a red toe cap and sole.',
-    category: 'Nouveautes', price: 34000, colors: [C.bleu, C.rouge], sizes: MIXTE_SIZES,
+    category: 'Femme', price: 34000, colors: [C.bleu, C.rouge], sizes: MIXTE_SIZES,
   },
   'sandale_à_bague_d_orteil_camel_et_médaillon_doré': {
     nameFr: 'Sandale à bague d’orteil camel et médaillon doré', nameEn: 'Camel toe ring sandal with gold medallion',
@@ -406,7 +406,7 @@ export const PRODUCTS = {
     nameFr: 'Mule entre-doigt personnalisée à bande tressée', nameEn: 'Personalised woven band toe post mule',
     descriptionFr: 'Bande tressée noire marquée en lettres dorées au nom de votre choix, sur semelle cognac.',
     descriptionEn: 'Black woven band marked in gold letters with the name of your choice, on a cognac sole.',
-    category: 'Nouveautes', price: 30000, colors: [C.noir, C.cognac], sizes: MIXTE_SIZES,
+    category: 'Femme', price: 30000, colors: [C.noir, C.cognac], sizes: MIXTE_SIZES,
   },
   'mule_à_découpe_H_camel': {
     nameFr: 'Mule à découpe H camel', nameEn: 'Camel H cut-out mule',
@@ -424,13 +424,13 @@ export const PRODUCTS = {
     nameFr: 'Mule à brides croisées en denim effiloché', nameEn: 'Frayed denim crossed strap mule',
     descriptionFr: 'Brides croisées en denim aux bords effilochés, sur semelle à bout carré.',
     descriptionEn: 'Crossed straps in denim with frayed edges, on a square-toe sole.',
-    category: 'Nouveautes', price: 25000, colors: [C.denim], sizes: FEMME_SIZES,
+    category: 'Femme', price: 25000, colors: [C.denim], sizes: FEMME_SIZES,
   },
   'mule_plateforme_entredoigt_en_tissu_bleu_rayé': {
     nameFr: 'Mule plateforme entre-doigt en tissu bleu rayé', nameEn: 'Striped blue fabric platform toe post mule',
     descriptionFr: 'Bride entre-doigt en tissu bleu et blanc sur une semelle plateforme noire.',
     descriptionEn: 'Blue and white fabric toe post strap on a black platform sole.',
-    category: 'Nouveautes', price: 31000, colors: [C.bleu, C.noir], sizes: FEMME_SIZES,
+    category: 'Femme', price: 31000, colors: [C.bleu, C.noir], sizes: FEMME_SIZES,
   },
   'mule_à_brides_croisées_en_cuir_blanc': {
     nameFr: 'Mule à brides croisées en cuir blanc', nameEn: 'White leather crossed strap mule',

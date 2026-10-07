@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearOtpChallenge, createOtpChallenge, maskPhone, readOtpChallenge, type OtpChallenge } from "@/lib/auth";
+import { clearOtpChallenge, createOtpChallenge, maskEmail, maskPhone, readOtpChallenge, type OtpChallenge } from "@/lib/auth";
 import { backendRequest, onSignedIn } from "@/lib/backend-api";
 
 export function OtpView({ labels }: { labels: Record<string, string> }) {
@@ -36,8 +36,9 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
     setSending(true);
     setError("");
     try {
-      const { expiresAt } = await backendRequest<{ expiresAt: string }>("/auth/otp/request", { method: "POST", body: JSON.stringify({ phone: challenge.phone }) });
-      setChallenge(createOtpChallenge(challenge.phone, challenge.mode, challenge.name, expiresAt));
+      const byEmail = challenge.channel === "email";
+      const { expiresAt } = await backendRequest<{ expiresAt: string }>(byEmail ? "/auth/email/resend" : "/auth/otp/request", { method: "POST", body: JSON.stringify(byEmail ? { email: challenge.phone } : { phone: challenge.phone }) });
+      setChallenge(createOtpChallenge(challenge.phone, challenge.mode, challenge.name, expiresAt, challenge.channel));
       setCode("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "");
@@ -49,7 +50,7 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
   const verify = async () => {
     if (code.length !== 6 || !challenge || remaining === 0) return;
     try {
-      const { user } = await backendRequest<{ user: { role: string } }>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone: challenge.phone, code, name: challenge.name }) });
+      const { user } = await backendRequest<{ user: { role: string } }>(challenge.channel === "email" ? "/auth/email/verify" : "/auth/otp/verify", { method: "POST", body: JSON.stringify(challenge.channel === "email" ? { email: challenge.phone, code } : { phone: challenge.phone, code, name: challenge.name }) });
       onSignedIn();
       if (user.role === "DEV") {
         clearOtpChallenge();
@@ -69,6 +70,6 @@ export function OtpView({ labels }: { labels: Record<string, string> }) {
   const expired = !challenge || remaining === 0;
   return <main className="auth-page"><div className="auth-wrap"><div className="auth-card otp-card">
     <Link className="otp-back" href={`/${locale}/compte/connexion`}>← {labels.back}</Link><h1>{labels.verification}</h1>
-    {expired ? <><p className="otp-expired">{labels.expired}</p><button className="auth-primary" onClick={resend} disabled={!challenge || sending}>{labels.resend}</button>{error && <span className="auth-error">{error}</span>}</> : <><p className="otp-message">{labels.sentTo} <strong>{maskPhone(challenge.phone)}</strong> <Link href={`/${locale}/compte/connexion`}>{labels.edit}</Link></p><div className="otp-boxes">{Array.from({ length: 6 }, (_, index) => <input key={index} maxLength={1} value={code[index] ?? ""} aria-label={`${labels.code} ${index + 1}`} onChange={(event) => setCode(code.slice(0, index) + event.target.value.replace(/\D/g, "").slice(-1) + code.slice(index + 1))} />)}</div><p className="otp-timer">{labels.resendIn} <strong>{countdown}</strong></p><button className="auth-primary" disabled={code.length !== 6} onClick={verify}>{labels.verify}</button>{error && <span className="auth-error">{error}</span>}</>}
+    {expired ? <><p className="otp-expired">{labels.expired}</p><button className="auth-primary" onClick={resend} disabled={!challenge || sending}>{labels.resend}</button>{error && <span className="auth-error">{error}</span>}</> : <><p className="otp-message">{labels.sentTo} <strong>{challenge.channel === "email" ? maskEmail(challenge.phone) : maskPhone(challenge.phone)}</strong> <Link href={`/${locale}/compte/connexion`}>{labels.edit}</Link></p><div className="otp-boxes">{Array.from({ length: 6 }, (_, index) => <input key={index} maxLength={1} value={code[index] ?? ""} aria-label={`${labels.code} ${index + 1}`} onChange={(event) => setCode(code.slice(0, index) + event.target.value.replace(/\D/g, "").slice(-1) + code.slice(index + 1))} />)}</div><p className="otp-timer">{labels.resendIn} <strong>{countdown}</strong></p><button className="auth-primary" disabled={code.length !== 6} onClick={verify}>{labels.verify}</button>{error && <span className="auth-error">{error}</span>}</>}
   </div></div></main>;
 }

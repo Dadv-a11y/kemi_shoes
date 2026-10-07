@@ -62,7 +62,7 @@ export default async function ProductPage({
         <div className="product-details">
           <span className="eyebrow">
             {t(
-              `catalog.categories.${product.category}` as "catalog.categories.tous",
+              `catalog.categories.${product.displayCategory}` as "catalog.categories.tous",
             )}
           </span>
           <h1>{product.name[locale]}</h1>
@@ -174,7 +174,7 @@ export default async function ProductPage({
               product={item}
               locale={locale}
               categoryLabel={t(
-                `catalog.categories.${item.category}` as "catalog.categories.tous",
+                `catalog.categories.${item.displayCategory}` as "catalog.categories.tous",
               )}
             />
           ))}

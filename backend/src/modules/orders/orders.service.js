@@ -8,6 +8,8 @@ import { ordersCreatedTotal } from '../../config/metrics.js';
 import { logger } from '../../config/logger.js';
 import { createNotification } from '../notifications/notifications.service.js';
 import { env } from '../../config/env.js';
+import { recordAttempt, listTransactions } from '../payments/payments.transactions.js';
+import { chargeableAmount } from '../payments/gateways/CampayGateway.js';
 
 const ETA_LABELS = (min, max) => (min === max ? `${min}h` : `${min}–${max}h`);
 
@@ -32,6 +34,7 @@ async function hydrateOrder(order) {
       [order.id]
     ),
     statusHistory: await all(`SELECT * FROM OrderStatusEvent WHERE orderId = ? ORDER BY createdAt ASC`, [order.id]),
+    paymentTransactions: await listTransactions(order.id),
   };
 }
 
@@ -136,6 +139,9 @@ export async function createOrder({ items, deliveryZoneId, address, guest, userI
     logger.error({ err, orderId }, 'payment_creation_failed');
   }
 
+  if (paymentResult.reference && paymentMethod !== 'CASH_ON_DELIVERY') {
+    await recordAttempt({ orderId, reference: paymentResult.reference, amountFcfa: chargeableAmount(totalFcfa), operator: paymentResult.operator });
+  }
   await run(`UPDATE "Order" SET paymentRef = ?, paymentStatus = ? WHERE id = ?`, [
     paymentResult.reference ?? null,
     paymentResult.status === 'paid' ? 'PAID' : 'PENDING',

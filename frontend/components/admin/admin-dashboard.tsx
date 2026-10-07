@@ -78,6 +78,7 @@ type ApiOrder = {
   deliveryZoneId: string;
 };
 type AdminOrder = { uuid: string; id: string; client: string; date: string; zone: string; status: OrderStatus; rawStatus: string; total: string };
+type PaymentTransactionInfo = { id: string; provider: string; reference: string; operatorReference: string | null; operator: string | null; status: string };
 type AdminReview = { id: string; productId: string; rating: number; comment: string; createdAt: string; status: string };
 type ContentPage = { id: string; slug: string; titleFr: string; titleEn?: string | null; bodyFr: string; bodyEn?: string | null };
 type UserRole = "CUSTOMER" | "PRODUCT_MANAGER" | "ADMIN" | "DEV";
@@ -102,11 +103,8 @@ const tabsConfig: NavItem[] = [
   { id: "delivery", label: "Livraison", iconClass: "fa-solid fa-truck" },
   { id: "payment", label: "Paiement", iconClass: "fa-solid fa-credit-card" },
   { id: "reviews", label: "Avis clients", iconClass: "fa-solid fa-star" },
-  {
-    id: "content",
-    label: "Contenu & traductions",
-    iconClass: "fa-regular fa-file-lines",
-  },
+  // Onglet « Contenu & traductions » masqué : la gestion du contenu migrera vers le tableau de bord
+  // de l'équipe technique (Puck). Le code de l'écran est conservé en attendant la migration.
   { id: "settings", label: "Paramètres", iconClass: "fa-solid fa-gear" },
 ];
 
@@ -192,7 +190,7 @@ function AdminDashboardContent() {
   const [contentPages, setContentPages] = useState<ContentPage[]>([]);
   const [editingContent, setEditingContent] = useState<ContentPage | null>(null);
   const [orderNote, setOrderNote] = useState("");
-  const [focusedOrder, setFocusedOrder] = useState<(ApiOrder & { internalNote?: string | null; items?: { productNameFr: string; quantity: number; size: string }[] }) | null>(null);
+  const [focusedOrder, setFocusedOrder] = useState<(ApiOrder & { internalNote?: string | null; items?: { productNameFr: string; quantity: number; size: string }[]; paymentTransactions?: PaymentTransactionInfo[] }) | null>(null);
   const [adminError, setAdminError] = useState("");
   const [dashboardKpis, setDashboardKpis] = useState(overviewKpis);
   const [dashboardTopProducts, setDashboardTopProducts] = useState(topProducts);
@@ -551,7 +549,7 @@ function AdminDashboardContent() {
 
   const openOrder = async (order: AdminOrder) => {
     try {
-      setFocusedOrder(await backendRequest<ApiOrder & { internalNote?: string | null; items?: { productNameFr: string; quantity: number; size: string }[] }>(`/orders/${order.uuid}`));
+      setFocusedOrder(await backendRequest<ApiOrder & { internalNote?: string | null; items?: { productNameFr: string; quantity: number; size: string }[]; paymentTransactions?: PaymentTransactionInfo[] }>(`/orders/${order.uuid}`));
       setOrderNote("");
       setAdminError("");
     } catch (error) { setAdminError(error instanceof Error ? error.message : "Chargement de la commande impossible."); }
@@ -940,6 +938,16 @@ function AdminDashboardContent() {
             <div className="mt-4 rounded-[8px] border border-[#E4DDD5] bg-white p-5">
               <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">{focusedOrder.reference}</h2><button type="button" onClick={() => setFocusedOrder(null)} aria-label="Fermer">×</button></div>
               <p className="mb-3 text-sm">{focusedOrder.items?.map((item) => `${item.productNameFr} × ${item.quantity} (taille ${item.size})`).join(", ")}</p>
+              {focusedOrder.paymentTransactions && focusedOrder.paymentTransactions.length > 0 && (
+                <div className="mb-3 rounded border border-[#E4DDD5] p-3 text-xs">
+                  <p className="mb-1 font-semibold uppercase tracking-[0.04em] text-[#8a8378]">Transactions de paiement</p>
+                  {focusedOrder.paymentTransactions.map((tx) => (
+                    <p key={tx.id} className="py-0.5">
+                      <strong>{tx.status}</strong> · {tx.operator ?? tx.provider} · réf. opérateur : <code>{tx.operatorReference ?? "—"}</code> · réf. {tx.provider} : <code>{tx.reference}</code>
+                    </p>
+                  ))}
+                </div>
+              )}
               <div className="mb-4 flex flex-wrap items-end gap-3">
                 <label className="text-xs font-semibold">Statut<select value={focusedOrder.status} onChange={(event) => {
                   const order = adminOrders.find((item) => item.uuid === focusedOrder.id);
@@ -1168,9 +1176,9 @@ function AdminDashboardContent() {
                       }
                       className="w-full rounded-[6px] border border-[#E4DDD5] bg-white px-3 py-2 text-[12.5px] outline-none focus:border-[#D2531E]"
                     >
+                      {selectedProduct?.category === "Nouveautes" && <option value="Nouveautes" disabled>À reclasser (ancienne catégorie)</option>}
                       <option value="Homme">Homme</option>
                       <option value="Femme">Femme</option>
-                      <option value="Nouveautes">Nouveautés</option>
                       <option value="Couple-Enfant">Couple / enfant</option>
                     </select>
                   </div>

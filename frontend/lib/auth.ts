@@ -5,7 +5,9 @@ export const OTP_VALIDITY_SECONDS = 5 * 60;
 export type OtpChallenge = {
   token: string;
   expiresAt: number;
+  /** Numéro E.164 (canal téléphone) ou adresse e-mail (canal e-mail). */
   phone: string;
+  channel?: "phone" | "email";
   mode: "login" | "signup";
   name?: string;
 };
@@ -26,12 +28,13 @@ export function readOtpChallenge(): OtpChallenge | null {
 }
 
 /** expiresAt : échéance du code renvoyée par POST /auth/otp/request (ISO). */
-export function createOtpChallenge(phone: string, mode: OtpChallenge["mode"], name?: string, expiresAt?: string) {
+export function createOtpChallenge(phone: string, mode: OtpChallenge["mode"], name?: string, expiresAt?: string, channel: "phone" | "email" = "phone") {
   const serverExpiry = expiresAt ? Date.parse(expiresAt) : Number.NaN;
   const challenge: OtpChallenge = {
     token: crypto.randomUUID(),
     expiresAt: Number.isFinite(serverExpiry) ? serverExpiry : Date.now() + OTP_VALIDITY_SECONDS * 1000,
     phone,
+    channel,
     mode,
     ...(name ? { name } : {}),
   };
@@ -50,4 +53,10 @@ export function maskPhone(phone: string) {
   const [, country, first, middle, last] = match;
   const hidden = `${first}${"X".repeat(middle.length)}${last}`.replace(/^(.{3})(.{3})/, "$1 $2 ");
   return `${country} ${hidden}`;
+}
+
+/** jean.dupont@gmail.com → « j•••@gmail.com ». */
+export function maskEmail(email: string) {
+  const [local, domain] = email.split("@");
+  return domain ? `${local.slice(0, 1)}•••@${domain}` : email;
 }

@@ -7,9 +7,10 @@ import { authLimiter, otpRequestLimiter } from '../../middleware/rateLimit.js';
 import { env } from '../../config/env.js';
 import { isPhoneAuthAvailable } from '../notifications/sms/sms.factory.js';
 import { setAuthCookies } from './cookies.js';
+import { emailVerificationMode } from './emailCode.service.js';
 
 import {
-  registerSchema, loginSchema, requestOtpSchema, verifyOtpSchema, refreshSchema, updateMeSchema,
+  registerSchema, loginSchema, requestEmailSchema, verifyEmailSchema, requestOtpSchema, verifyOtpSchema, refreshSchema, updateMeSchema,
 } from './auth.schema.js';
 
 // Callback OAuth : la session est posée en cookies HttpOnly, puis retour sur le frontend
@@ -27,6 +28,10 @@ const router = Router();
 router.post('/register', authLimiter, validate(registerSchema), controller.register);
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
 
+// --- Vérification de l'adresse e-mail (code à 6 chiffres) ---
+router.post('/email/resend', otpRequestLimiter, validate(requestEmailSchema), controller.resendEmailCode);
+router.post('/email/verify', authLimiter, validate(verifyEmailSchema), controller.verifyEmailCode);
+
 // --- Téléphone + OTP (méthode principale pour la clientèle locale) ---
 router.post('/otp/request', otpRequestLimiter, validate(requestOtpSchema), controller.requestOtp);
 router.post('/otp/verify', authLimiter, validate(verifyOtpSchema), controller.verifyOtp);
@@ -42,7 +47,7 @@ router.delete('/me', requireAuth, controller.deleteMe);
 
 // Liste des fournisseurs OAuth actifs — le frontend n'affiche que ceux-là.
 // Seules les méthodes réellement configurées sont proposées par le frontend.
-router.get('/providers', (req, res) => res.json({ password: true, phone: isPhoneAuthAvailable(), ...oauthEnabled }));
+router.get('/providers', (req, res) => res.json({ password: true, emailVerification: emailVerificationMode() === 'on', phone: isPhoneAuthAvailable(), ...oauthEnabled }));
 
 // --- OAuth Google / Facebook (actives seulement si les identifiants sont configurés) ---
 if (oauthEnabled.google) {

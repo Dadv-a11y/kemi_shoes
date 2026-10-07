@@ -10,7 +10,12 @@ export type Product = {
   price: number;
   image: string;
   images: string[];
+  /** Catégorie réelle choisie dans le back-office (jamais « nouveautes »). */
   category: ProductCategory;
+  /** Ajouté depuis moins de 14 jours (calculé par l'API). */
+  isNew?: boolean;
+  /** Libellé de catégorie affiché : « nouveautes » pendant 14 jours, puis la vraie catégorie. */
+  displayCategory: ProductCategory;
   colors: string[];
   /** Couleurs du produit (nom + hex) telles que saisies dans le back-office. */
   colorOptions?: { name: string; hex: string }[];

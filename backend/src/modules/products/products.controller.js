@@ -1,3 +1,4 @@
+import { convertToWebp } from './image.convert.js';
 import * as productsService from './products.service.js';
 import { audit } from '../../middleware/audit.js';
 
@@ -48,8 +49,9 @@ export async function updateSizeAvailability(req, res) {
  * fichier sur disque sous un nom aléatoire — voir products.upload.js).
  * Renvoie l'URL publique à inclure ensuite dans le tableau `images` du produit.
  */
-export function uploadImage(req, res) {
+export async function uploadImage(req, res) {
   if (!req.file) return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Aucun fichier reçu.' } });
-  audit(req, { action: 'product.image_uploaded', entityType: 'ProductImage', metadata: { filename: req.file.filename } });
-  res.status(201).json({ url: `/uploads/products/${req.file.filename}` });
+  const filename = await convertToWebp(req.file.path);
+  audit(req, { action: 'product.image_uploaded', entityType: 'ProductImage', metadata: { filename } });
+  res.status(201).json({ url: `/uploads/products/${filename}` });
 }
