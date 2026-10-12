@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Clock, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
+
+const ORDER_STEPS = ["CONFIRMED", "PREPARING", "SHIPPED", "DELIVERED"];
 import { backendRequest } from "@/lib/backend-api";
 import { formatPrice, type Locale } from "@/lib/catalog";
 
@@ -27,7 +29,7 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000;
  * paiement en ligne est en attente, gère le retour de la page carte CamPay
  * (?reference=...) et permet de relancer un paiement échoué.
  */
-export function PaymentTracker({ orderId, locale, labels, session, returnReference }: { orderId: string; locale: Locale; labels: Labels; session?: PaymentSession; returnReference?: string | null }) {
+export function PaymentTracker({ orderId, locale, labels, session, returnReference, showReference = false, timeline }: { orderId: string; locale: Locale; labels: Labels; session?: PaymentSession; returnReference?: string | null; showReference?: boolean; timeline?: string[] }) {
   const [status, setStatus] = useState<PaymentStatus | null>(null);
   const [current, setCurrent] = useState<PaymentSession | undefined>(session);
   const [error, setError] = useState(session?.error ?? "");
@@ -91,8 +93,12 @@ export function PaymentTracker({ orderId, locale, labels, session, returnReferen
 
   const capped = online && status.chargedAmountFcfa < status.totalFcfa;
 
+  const reached = ORDER_STEPS.indexOf(status.status) + 1;
+
   return (
+    <>
     <div className={`payment-tracker payment-${status.paymentStatus.toLowerCase()}`} aria-live="polite">
+      {showReference && <span className="payment-reference">{labels.order} <b>{status.reference}</b></span>}
       {status.paymentMethod === "CASH_ON_DELIVERY" ? (
         <p>{labels.codConfirmedText}</p>
       ) : status.paymentStatus === "PAID" ? (
@@ -106,7 +112,7 @@ export function PaymentTracker({ orderId, locale, labels, session, returnReferen
         </>
       ) : (
         <>
-          <strong><Clock aria-hidden="true" /> {labels.paymentPending}</strong>
+          <strong><Loader2 className="payment-spinner" aria-hidden="true" /> {labels.paymentPending}</strong>
           {status.paymentMethod === "MOBILE_MONEY" ? (
             <>
               <p>{labels.paymentPendingText}</p>
@@ -121,5 +127,7 @@ export function PaymentTracker({ orderId, locale, labels, session, returnReferen
       {capped && <small className="payment-tracker-note">{labels.demoNote} {formatPrice(status.chargedAmountFcfa, locale)} ({labels.amountCharged}).</small>}
       {error && <p className="checkout-field-error">{error}</p>}
     </div>
+    {timeline && status.status !== "CANCELLED" && <div className="order-done-card order-done-timeline"><div className="timeline">{timeline.map((step, index) => <div className={`timeline-step ${index < reached ? "is-done" : ""}`} key={step}><span className="timeline-dot">{index < reached ? <Check /> : index + 1}</span><span>{step}</span></div>)}</div></div>}
+    </>
   );
 }

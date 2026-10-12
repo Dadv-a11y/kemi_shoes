@@ -51,6 +51,8 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [zoneId, setZoneId] = useState("");
   const [placedOrder, setPlacedOrder] = useState<{ id: string; reference: string; payment?: PaymentSession } | null>(null);
+  // Instantané de la commande passée : le panier est vidé dès l'envoi, la confirmation doit rester lisible.
+  const [placedSnapshot, setPlacedSnapshot] = useState<{ items: CartItem[]; subtotal: number; shipping: number; total: number; eta: string; address: string; paymentLabel: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   useEffect(() => { backendRequest<DeliveryZone[]>("/delivery-zones?activeOnly=true").then((result) => { setZones(result); setZoneId(result[0]?.id ?? ""); }).catch(() => setZones([])); }, []);
@@ -105,6 +107,7 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
           ...(payment === "mm" ? { paymentPhone: mobileNumber } : {}),
         }),
       });
+      setPlacedSnapshot({ items, subtotal, shipping, total, eta: selectedZone ? `${selectedZone.etaMinHours}–${selectedZone.etaMaxHours}h` : "24–48h", address: `${deliveryDetails.fullName} — ${deliveryDetails.neighborhood}, ${deliveryDetails.city}, ${deliveryDetails.country}`, paymentLabel });
       saveCart([]);
       // Carte : paiement sur la page hébergée CamPay, retour sur /commande/suivi.
       if (result.payment.redirectUrl) {
@@ -133,7 +136,16 @@ export function CheckoutView({ locale, labels }: { locale: Locale; labels: Label
 
         {step === 3 && <section className="checkout-step-content"><h1>{labels.summary}</h1><SummaryBlock title={labels.deliveryAddress} onEdit={() => goTo(1)} edit={labels.edit}>{deliveryDetails.fullName} — {deliveryDetails.neighborhood}, {deliveryDetails.city}, {deliveryDetails.country}</SummaryBlock><SummaryBlock title={labels.paymentMethod} onEdit={() => goTo(2)} edit={labels.edit}>{paymentLabel}</SummaryBlock><SummaryBlock title={`${labels.items} (${items.reduce((sum, item) => sum + item.quantity, 0)})`}>{items.length ? items.map((item) => `${item.name} × ${item.quantity}`).join(", ") : "-"}</SummaryBlock><label className="checkout-check"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />{labels.accept}</label>{submitError && <p className="checkout-field-error">{submitError}</p>}<button className="checkout-primary" disabled={!accepted || submitting} onClick={submitOrder}>{labels.confirm}</button></section>}
 
-        {step === 4 && <section className="checkout-confirmation"><div className="checkout-confirm-icon"><Check aria-hidden="true" /></div><h1>{labels.thanks}</h1><p>{labels.confirmationSent}</p><strong>{labels.order} {placedOrder?.reference}</strong>{placedOrder && <PaymentTracker orderId={placedOrder.id} locale={locale} labels={labels} session={placedOrder.payment} />}<div className="checkout-confirm-summary"><div><span>{labels.estimated}</span><span>{selectedZone ? `${selectedZone.etaMinHours}–${selectedZone.etaMaxHours}h` : "24–48h"}</span></div><div><span>{labels.paymentMethod}</span><span>{paymentLabel}</span></div><div><strong>{labels.paidTotal}</strong><strong>{formatPrice(total, locale)}</strong></div></div><Link className="checkout-secondary" href={`/${locale}/commande/suivi?order=${placedOrder?.id ?? ""}`}>💬 {labels.follow}</Link><div className="checkout-account-prompt"><strong>{labels.createAccount}</strong><p>{labels.createAccountText}</p><Link className="checkout-primary" href={`/${locale}/compte/connexion`}>{labels.create}</Link></div><Link className="checkout-link-button" href={`/${locale}/boutique`}>{labels.continueShopping}</Link></section>}
+        {step === 4 && <section className="order-done">
+          <div className="order-done-hero"><div className="checkout-confirm-icon"><Check aria-hidden="true" /></div><h1>{labels.thanks}</h1><p>{labels.confirmationSent}</p>{placedOrder && <span className="order-done-ref">{labels.order} <strong>{placedOrder.reference}</strong></span>}</div>
+          {placedOrder && <PaymentTracker orderId={placedOrder.id} locale={locale} labels={labels} session={placedOrder.payment} />}
+          {placedSnapshot && <div className="order-done-card"><h2>{labels.summary}</h2>
+            <ul className="order-done-items">{placedSnapshot.items.map((item) => <li key={item.id}><span className="order-done-thumb"><Image src={item.image} alt={item.name} fill sizes="64px" /></span><div><strong>{item.name}</strong><span>{[item.size, item.color].filter(Boolean).join(" · ")} × {item.quantity}</span></div><b>{formatPrice(item.price * item.quantity, locale)}</b></li>)}</ul>
+            <dl className="order-done-facts"><div><dt>{labels.estimated.split(":")[0]}</dt><dd>{placedSnapshot.eta}</dd></div><div><dt>{labels.deliveryAddress}</dt><dd>{placedSnapshot.address}</dd></div><div><dt>{labels.paymentMethod}</dt><dd>{placedSnapshot.paymentLabel}</dd></div></dl>
+            <div className="order-done-totals"><div><span>{labels.subtotal}</span><span>{formatPrice(placedSnapshot.subtotal, locale)}</span></div><div><span>{labels.shipping}</span><span>{formatPrice(placedSnapshot.shipping, locale)}</span></div><div className="order-done-total"><strong>{labels.total}</strong><strong>{formatPrice(placedSnapshot.total, locale)}</strong></div></div></div>}
+          <div className="order-done-actions"><Link className="checkout-primary" href={`/${locale}/commande/suivi?order=${placedOrder?.id ?? ""}`}>{labels.follow}</Link><Link className="checkout-secondary" href={`/${locale}/boutique`}>{labels.continueShopping}</Link></div>
+          <div className="checkout-account-prompt"><strong>{labels.createAccount}</strong><p>{labels.createAccountText}</p><Link className="checkout-primary" href={`/${locale}/compte/connexion`}>{labels.create}</Link></div>
+        </section>}
       </div><OrderSummary locale={locale} labels={labels} items={items} subtotal={subtotal} shipping={shipping} total={total} hidden={step === 4} /></div></div>
     </main>
   );
