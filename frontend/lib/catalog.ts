@@ -1,5 +1,9 @@
 export type Locale = "fr" | "en";
-export type ProductCategory = "femme" | "homme" | "nouveautes" | "couple-enfant";
+/** Slug d'une catégorie gérée dans le back-office (« homme », « femme », …). */
+export type ProductCategory = string;
+
+/** Slug de la vue « Nouveautés » (calculée : produits de moins de 14 jours). */
+export const NEW_CATEGORY_SLUG = "nouveautes";
 
 export type LocalizedText = { fr: string; en: string };
 
@@ -10,12 +14,12 @@ export type Product = {
   price: number;
   image: string;
   images: string[];
-  /** Catégorie réelle choisie dans le back-office (jamais « nouveautes »). */
+  /** Catégorie réelle choisie dans le back-office (slug, jamais « nouveautes »). */
   category: ProductCategory;
+  /** Nom de la catégorie, tel que saisi dans le back-office. */
+  categoryName: LocalizedText;
   /** Ajouté depuis moins de 14 jours (calculé par l'API). */
   isNew?: boolean;
-  /** Libellé de catégorie affiché : « nouveautes » pendant 14 jours, puis la vraie catégorie. */
-  displayCategory: ProductCategory;
   colors: string[];
   /** Couleurs du produit (nom + hex) telles que saisies dans le back-office. */
   colorOptions?: { name: string; hex: string }[];
@@ -38,4 +42,9 @@ export function isCustomMaterial(material?: string) {
 
 export function formatPrice(price: number, locale: Locale) {
   return new Intl.NumberFormat(locale === "fr" ? "fr-CM" : "en-CM").format(price) + " FCFA";
+}
+
+/** Libellé de catégorie des cartes : « Nouveautés » pendant 14 jours, puis la vraie catégorie. */
+export function productCategoryLabel(product: Pick<Product, "isNew" | "categoryName">, locale: Locale) {
+  return product.isNew ? (locale === "en" ? "New in" : "Nouveautés") : product.categoryName[locale];
 }

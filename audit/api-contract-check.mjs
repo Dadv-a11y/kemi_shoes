@@ -271,5 +271,28 @@ for (const [label, token, expected] of [['/health public', undefined, 200], ['/m
 
 const failed = results.filter((r) => !r.ok);
 for (const r of results) console.log(`${r.ok ? '✔' : '✖'} ${r.method.padEnd(6)} ${r.path.padEnd(58)} ${String(r.status).padEnd(4)} (attendu ${r.expected}) ${r.label}${!r.ok && r.detail ? `\n     → ${r.detail}` : ''}`);
+// --- catalogue dynamique : catégories, collections, facettes, meilleures ventes ---
+const cats = await call('GET', '/categories', { label: 'catégories publiques' }); route('GET /categories');
+results.push({ ok: Array.isArray(cats.data?.items) && cats.data.items.every((c) => c.count > 0), method: 'GET', path: '/categories', status: cats.status, expected: 'seulement des catégories non vides', label: 'catégories sans produit masquées', detail: JSON.stringify(cats.data?.items?.map((c) => c.slug)) });
+await call('GET', '/categories/all', { token: undefined, expect: 401, label: 'catégories admin sans token' });
+await call('GET', '/categories/all', { token: C, expect: 403, label: 'catégories admin refusées au client' });
+await call('GET', '/categories/all', { token: A, label: 'catégories admin' }); route('GET /categories/all');
+const newCat = await call('POST', '/categories', { token: A, body: { nameFr: `Audit ${Date.now()}` }, expect: 201, label: 'création catégorie' }); route('POST /categories');
+await call('POST', '/categories', { token: C, body: { nameFr: 'Interdit' }, expect: 403, label: 'création catégorie refusée au client' });
+await call('PATCH', `/categories/${newCat.data?.id}`, { token: A, body: { nameEn: 'Audit EN' }, label: 'renommage catégorie' }); route('PATCH /categories/:id');
+await call('DELETE', `/categories/${newCat.data?.id}`, { token: A, expect: 204, label: 'suppression catégorie vide' }); route('DELETE /categories/:id');
+const colls = await call('GET', '/collections', { label: 'collections publiques' }); route('GET /collections');
+results.push({ ok: typeof colls.data?.showcase === 'boolean', method: 'GET', path: '/collections', status: colls.status, expected: 'indicateur showcase (>= 3 collections garnies)', label: 'section collections pilotée par l’API', detail: JSON.stringify({ showcase: colls.data?.showcase, count: colls.data?.items?.length }) });
+await call('GET', '/collections/all', { token: A, label: 'collections admin' }); route('GET /collections/all');
+const newColl = await call('POST', '/collections', { token: A, body: { nameFr: `Collection audit ${Date.now()}` }, expect: 201, label: 'création collection' }); route('POST /collections');
+await call('PATCH', `/collections/${newColl.data?.id}`, { token: A, body: { active: false }, label: 'masquage collection' }); route('PATCH /collections/:id');
+await call('DELETE', `/collections/${newColl.data?.id}`, { token: A, expect: 204, label: 'suppression collection' }); route('DELETE /collections/:id');
+const facets = await call('GET', '/products/facets', { label: 'facettes de filtre' }); route('GET /products/facets');
+results.push({ ok: Array.isArray(facets.data?.sizes) && Array.isArray(facets.data?.colors), method: 'GET', path: '/products/facets', status: facets.status, expected: 'tailles, couleurs, prix', label: 'facettes issues de la base', detail: JSON.stringify(facets.data)?.slice(0, 120) });
+const top = await call('GET', '/products/top?limit=10', { label: 'top des ventes' }); route('GET /products/top');
+const sorted = (await call('GET', '/products?status=active&sort=priceAsc&pageSize=50', { label: 'tri par prix' })).data?.items?.map((p) => p.price) ?? [];
+results.push({ ok: top.data?.items?.length <= 10 && sorted.every((price, i) => i === 0 || price >= sorted[i - 1]), method: 'GET', path: '/products', status: 200, expected: 'top <= 10, tri croissant respecté', label: 'tri et top côté API', detail: JSON.stringify({ top: top.data?.items?.length, prices: sorted.slice(0, 5) }) });
+await call('GET', '/products?category=nouveautes&status=active', { label: 'filtre Nouveautés (14 jours)' });
+
 console.log(`\n${results.length - failed.length}/${results.length} vérifications OK — ${hit.size} routes couvertes`);
 process.exitCode = failed.length ? 1 : 0;

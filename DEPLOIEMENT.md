@@ -587,3 +587,15 @@ par e-mail ; aucune session n'est ouverte tant qu'il n'est pas saisi sur la page
 expiration du précédent (`OTP_TTL_MINUTES`, 5 min). Sans SMTP en production, l'inscription par e-mail répond 503 (`EMAIL_UNAVAILABLE`).
 Les comptes créés avant cette fonction doivent confirmer leur adresse à la prochaine connexion ; `npm run user:set-role` et
 `npm run user:make-admin` marquent l'adresse comme vérifiée (à utiliser pour les comptes ADMIN/DEV si le SMTP n'est pas encore prêt).
+
+## 10. Catalogue : catégories, collections, tendances
+
+- **Catégories** (admin › Catégories) : chaque catégorie active et non vide devient la route `/boutique/<slug>`, listée dans le menu et le pied de page.
+  « Nouveautés » n'est pas une catégorie : `/boutique/nouveautes` n'existe que tant qu'un produit actif a moins de 14 jours. Les anciens liens
+  `/boutique?categorie=…` redirigent vers les nouvelles routes. Un produit « Nouveautes » hérité d'avant cette version apparaît « À reclasser » dans l'admin.
+- **Meilleures ventes** : chaque route de catégorie précharge les 20 produits les plus vendus (commandes non annulées), « Voir plus » en ajoute 20.
+  Les filtres (tri, taille, couleur, prix) sont des paramètres d'URL traités par l'API ; leurs valeurs viennent de `GET /products/facets`.
+- **Collections** (admin › Collections, puis cases à cocher dans la fiche produit) : la section « Nos collections » de l'accueil s'affiche dès que
+  3 collections contiennent au moins un produit publié (meilleure vente de chacune), et `/collections/<slug>` liste leurs produits.
+- **Tendances du moment** (accueil) : les 4 premiers produits du top 10 des ventes (`GET /products/top`).
+- **Aperçu du formulaire produit** : le back-office embarque la page `/apercu-produit` (rendu réel de la carte et de la fiche, largeur mobile ou ordinateur).

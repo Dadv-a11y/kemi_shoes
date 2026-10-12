@@ -1,18 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Check, ChevronRight } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { ArrowUpRight } from "lucide-react";
 import { getI18n } from "@/locales/server";
-import { formatPrice, type Locale } from "@/lib/catalog";
+import { productCategoryLabel, type Locale } from "@/lib/catalog";
 import { getCatalogProductBySlug, getCatalogProducts } from "@/lib/catalog-api";
-import { ProductGallery } from "@/components/catalog/product-gallery";
-import { ProductPurchasePanel } from "@/components/catalog/product-purchase-panel";
+import { ProductDetail } from "@/components/catalog/product-detail";
 import { ProductCard } from "@/components/catalog/product-card";
 import { ProductReviews } from "@/components/catalog/product-reviews";
 import { setStaticParamsLocale } from "next-international/server";
@@ -38,105 +30,20 @@ export default async function ProductPage({
   if (!product) notFound();
   if (!product.id) notFound();
 
-  const relatedProducts = (await getCatalogProducts())
-    .filter((item) => item.slug.fr !== product.slug.fr)
+  // Suggestions : meilleures ventes de la même catégorie, complétées par le reste du catalogue.
+  const sameCategory = (await getCatalogProducts({ category: product.category, sort: "popular", pageSize: 5 })).items;
+  const others = sameCategory.length < 5 ? (await getCatalogProducts({ sort: "popular", pageSize: 8 })).items : [];
+  const relatedProducts = [...sameCategory, ...others]
+    .filter((item, index, list) => item.slug.fr !== product.slug.fr && list.findIndex((other) => other.slug.fr === item.slug.fr) === index)
     .slice(0, 4);
-  const galleryImages = product.images.length ? product.images : [product.image];
 
   return (
     <main className="product-page">
-      <div className="product-breadcrumb">
-        <Link href={`/${locale}/boutique`}>
-          <ArrowLeft aria-hidden="true" /> {t("catalog.title")}
-        </Link>
-        <ChevronRight aria-hidden="true" />
-        <span>{product.name[locale]}</span>
-      </div>
-      <section className="product-layout section">
-        <div className="product-gallery">
-          <ProductGallery images={galleryImages} name={product.name[locale]} />
-          <Badge variant="secondary" className="product-handmade">
-            {t("product.handmade")}
-          </Badge>
-        </div>
-        <div className="product-details">
-          <span className="eyebrow">
-            {t(
-              `catalog.categories.${product.displayCategory}` as "catalog.categories.tous",
-            )}
-          </span>
-          <h1>{product.name[locale]}</h1>
-          <p className="product-subtitle">{product.subtitle[locale]}</p>
-          <div className="product-price-row">
-            <strong className="product-price">
-              {formatPrice(product.price, locale)}
-            </strong>
-            <Badge className="stock-badge">
-              <Check data-icon="inline-start" />
-              En stock
-            </Badge>
-          </div>
-          <ProductPurchasePanel
-            productId={product.id}
-            slug={product.slug[locale]}
-            name={product.name[locale]}
-            price={product.price}
-            image={product.image}
-            addLabel={t("product.add")}
-            whatsappLabel={t("product.whatsapp")}
-            colorLabel={t("product.color")}
-            sizeLabel={t("product.size")}
-            materialLabel={t("product.material")}
-            materialValue={product.material[locale]}
-            materialCustomizable={product.materialCustomizable}
-            colorOptions={product.colorOptions}
-            availableSizes={product.availableSizes}
-            unavailableSizes={product.unavailableSizes}
-            customNote={t("product.customNote")}
-          />
-          <ul className="delivery-list">
-            <li>
-              <i />
-              Livraison estimée : 24–48h (Douala/Yaoundé)
-            </li>
-            <li>
-              <i />
-              Paiement à la livraison disponible au Cameroun
-            </li>
-            <li>
-              <i />
-              Retours et échanges acceptés sous 7 jours
-            </li>
-          </ul>
-          <Accordion
-            className="product-accordion"
-            defaultValue={["making"]}
-            multiple
-          >
-            <AccordionItem value="making">
-              <AccordionTrigger>{t("product.making")}</AccordionTrigger>
-              <AccordionContent>
-                Chaque paire est découpée, assemblée et finie à la main dans
-                notre atelier à Douala par les mêmes artisans.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="care">
-              <AccordionTrigger>{t("product.care")}</AccordionTrigger>
-              <AccordionContent>
-                Nettoyez avec un chiffon doux et nourrissez régulièrement le
-                cuir avec un produit adapté.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="delivery">
-              <AccordionTrigger>{t("product.delivery")}</AccordionTrigger>
-              <AccordionContent>
-                Livraison nationale sous 24h à 5 jours selon la zone. Retours
-                acceptés sous 7 jours pour un article non porté.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
+      <ProductDetail
+        product={product}
+        locale={locale}
+        labels={{ catalogTitle: t("catalog.title"), handmade: t("product.handmade"), add: t("product.add"), whatsapp: t("product.whatsapp"), color: t("product.color"), size: t("product.size"), material: t("product.material"), customNote: t("product.customNote"), making: t("product.making"), care: t("product.care"), delivery: t("product.delivery") }}
+      />
       <ProductReviews
         productId={product.id}
         openFromNotification={review === "1"}
@@ -173,9 +80,7 @@ export default async function ProductPage({
               key={item.id ?? item.slug.fr}
               product={item}
               locale={locale}
-              categoryLabel={t(
-                `catalog.categories.${item.displayCategory}` as "catalog.categories.tous",
-              )}
+              categoryLabel={productCategoryLabel(item, locale)}
             />
           ))}
         </div>

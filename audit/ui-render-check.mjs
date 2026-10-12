@@ -98,7 +98,7 @@ async function audit(name, url, { session, viewport = { width: 1366, height: 900
 }
 
 const pages = [
-  ['accueil', ''], ['boutique', '/boutique'], ['boutique-femme', '/boutique?categorie=femme'], ['panier-vide', '/panier'],
+  ['accueil', ''], ['boutique', '/boutique'], ['boutique-femme', '/boutique/femme'], ['boutique-nouveautes', '/boutique/nouveautes'], ['collection', '/collections/ete'], ['panier-vide', '/panier'],
   ['notre-histoire', '/notre-histoire'], ['cgv', '/cgv'], ['confidentialite', '/confidentialite'], ['mentions-legales', '/mentions-legales'],
   ['connexion', '/compte/connexion'], ['verification-otp', '/compte/verification'], ['compte-invite', '/compte'], ['commande-vide', '/commande'],
   ['suivi-sans-commande', '/commande/suivi'], ['admin-invite', '/admin'], ['404', '/page-inexistante'],
@@ -142,17 +142,17 @@ await audit('parcours-achat', `/fr/produits/${product.slugFr}`, {
     await page.locator('.checkout-check input').check();
     await step(page, 'parcours-6-recapitulatif');
     await page.locator('.checkout-step-content .checkout-primary').click();
-    await page.waitForSelector('.checkout-confirmation, .checkout-field-error', { timeout: 15000 });
+    await page.waitForSelector('.order-done, .checkout-field-error', { timeout: 15000 });
     const error = await page.locator('.checkout-field-error').allTextContents();
     if (error.length) issues.push(`checkout refusé: ${error.join(' | ')}`);
-    placedReference = (await page.locator('.checkout-confirmation strong').first().textContent().catch(() => '')) ?? '';
+    placedReference = (await page.locator('.order-done-ref strong').first().textContent().catch(() => '')) ?? '';
   },
   shotName: 'parcours-7-confirmation',
 });
 await audit('compte-cliente', '/fr/compte', {
   session: client,
   action: async (page, issues) => {
-    const withImage = await page.locator('.order-card .product-thumb.has-image img').count();
+    const withImage = await page.locator('.order-card .order-thumb img').count();
     if (!withImage) issues.push('cards de commande sans photo produit');
     // Menu des notifications (avis demandé après livraison) ouvert au survol.
     if (await page.locator('.notification-button').count()) {
@@ -165,7 +165,7 @@ await audit('compte-cliente', '/fr/compte', {
 });
 
 // --- Back-office : chaque onglet ---
-const tabs = ["Vue d'ensemble", 'Commandes', 'Produits', 'Clients', 'Livraison', 'Paiement', 'Avis clients', 'Contenu & traductions', 'Paramètres'];
+const tabs = ["Vue d'ensemble", 'Commandes', 'Produits', 'Catégories', 'Collections', 'Clients', 'Livraison', 'Paiement', 'Avis clients', 'Paramètres'];
 for (const [index, tab] of tabs.entries()) {
   await audit(`admin-${index}-${tab.replace(/[^a-zA-Zéè]+/g, '-').toLowerCase()}`, '/fr/admin', {
     session: admin,

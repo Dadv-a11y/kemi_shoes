@@ -24,7 +24,7 @@ export default async function OurStoryPage({ params }: { params: Promise<{ local
   const locale = locales === "en" ? "en" : "fr";
   const t = await getI18n();
   const story = (key: string) => t(`storyPage.${key}` as never);
-  const products = await getCatalogProducts();
+  const products = (await getCatalogProducts()).items;
   const fallback = "/logo_kemi_shoes.jpg";
 
   return <main className="story-page">
