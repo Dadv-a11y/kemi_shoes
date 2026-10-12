@@ -138,8 +138,6 @@ const orderStatusClasses: Record<
 const overviewKpis: {
   label: string;
   value: string;
-  delta: string;
-  positive: boolean;
 }[] = [];
 
 const topProducts: { name: string; sales: number; percent: number; trend: number }[] = [];
@@ -357,26 +355,18 @@ function AdminDashboardContent() {
           {
             label: "Commandes",
             value: String(kpis.orders),
-            delta: "Données backend",
-            positive: true,
           },
           {
             label: "Ventes (unités)",
             value: String(kpis.unitsSold),
-            delta: "Données backend",
-            positive: true,
           },
           {
             label: "Chiffre d'affaires",
             value: `${kpis.revenueFcfa.toLocaleString("fr-FR")}f`,
-            delta: "Données backend",
-            positive: true,
           },
           {
             label: "Panier moyen",
             value: `${kpis.averageBasketFcfa.toLocaleString("fr-FR")}f`,
-            delta: "Données backend",
-            positive: true,
           },
         ]);
         // Longueur de barre = part des ventes du meilleur produit (trendPercent mesure
@@ -793,12 +783,6 @@ function AdminDashboardContent() {
                 </div>
                 <div className="font-(--font-fraunces) text-[27px] font-semibold leading-none tracking-[-0.01em]">
                   {item.value}
-                </div>
-                <div
-                  className="mt-2 text-[11px] font-semibold"
-                  style={{ color: item.positive ? "#3f6b4a" : "#a13b2f" }}
-                >
-                  {item.delta}
                 </div>
               </div>
             ))}
