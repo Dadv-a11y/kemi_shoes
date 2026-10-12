@@ -608,5 +608,8 @@ Les comptes créés avant cette fonction doivent confirmer leur adresse à la pr
   Le numéro vient de Admin › Paramètres › WhatsApp. Une zone de livraison active est nécessaire.
 - **Admin** : une commande WhatsApp ouverte depuis plus de 24 h déclenche un toast « Les produits ont-ils bien été livrés ? » (Oui, livrée / Pas encore, qui
   repousse de 24 h / Annulée). « Oui » appelle `POST /api/v1/orders/:id/confirm-delivery` : étapes restantes parcourues, paiement à la remise soldé.
-- **Boutique** : un clic sur un onglet (catégorie, collection) ou un filtre fait défiler jusqu'à la liste de produits ; le bouton « + » des cartes (ajout rapide,
-  choix de la taille) affiche un toast en haut de l'écran avec le produit, le nombre d'articles du panier et « Commander » — masqué sur le panier et les fiches produit.
+- **Boutique** : un clic sur un onglet (catégorie, collection) ou un filtre fait défiler jusqu'à la liste de produits.
+- **Codes HTTP** : une catégorie, une collection ou un produit inconnu (ou brouillon) répond **404** ; l'ancien lien `/boutique?categorie=…` répond **308** vers
+  `/boutique/<slug>`. L'existence est vérifiée dans `proxy.ts` (résultat gardé 30 s) car le rendu des pages est déjà en streaming quand `notFound()` s'exécute :
+  le proxy doit donc pouvoir joindre l'API (`BACKEND_API_URL`). Vérification : `node audit/http-status-check.mjs`.
+- **Toast admin** : composant `toast` de shadcn/ui (`components/ui/toast.tsx`, inchangé), alimenté par `components/admin/delivery-confirmation-toasts.tsx`.
