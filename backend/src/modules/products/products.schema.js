@@ -11,7 +11,7 @@ const productBase = {
   descriptionEn: z.string().min(1),
   // « Nouveautés » n'est pas une catégorie choisissable : un produit est « nouveau » pendant
   // NEW_PRODUCT_DAYS jours après sa création (voir products.service.js).
-  category: z.enum(['Homme', 'Femme', 'Couple-Enfant']),
+  category: z.string().min(1).max(60),
   price: z.number().int().positive(),
   compareAtPrice: z.number().int().positive().optional(),
   status: z.enum(['draft', 'active', 'out_of_stock']).optional(),
@@ -20,6 +20,7 @@ const productBase = {
   images: z.array(imageSchema).optional(),
   colors: z.array(colorSchema).optional(),
   sizes: z.array(sizeSchema).optional(),
+  collectionIds: z.array(z.string().uuid()).max(30).optional(),
 };
 
 export const createProductSchema = z.object({ body: z.object(productBase) });
@@ -32,10 +33,20 @@ export const updateProductSchema = z.object({
 export const listProductsSchema = z.object({
   query: z.object({
     category: z.string().optional(),
+    collection: z.string().max(80).optional(),
     status: z.string().optional(),
+    sort: z.enum(['newest', 'priceAsc', 'priceDesc', 'popular']).optional(),
+    size: z.string().max(10).optional(),
+    color: z.string().max(40).optional(),
+    minPrice: z.coerce.number().int().min(0).optional(),
+    maxPrice: z.coerce.number().int().min(0).optional(),
     page: z.coerce.number().int().min(1).optional(),
     pageSize: z.coerce.number().int().min(1).max(100).optional(),
   }),
+});
+
+export const facetsSchema = z.object({
+  query: z.object({ category: z.string().optional(), collection: z.string().max(80).optional() }),
 });
 
 export const productIdSchema = z.object({ params: z.object({ id: z.string().uuid() }) });

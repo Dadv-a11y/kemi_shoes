@@ -76,6 +76,39 @@ CREATE TABLE IF NOT EXISTS Product (
 CREATE INDEX IF NOT EXISTS idx_product_category ON Product(category);
 CREATE INDEX IF NOT EXISTS idx_product_status ON Product(status);
 
+-- Catégories gérées depuis l'admin (Product.category stocke leur slug). « Nouveautés » n'en fait pas
+-- partie : c'est une vue calculée (produits créés depuis moins de 14 jours).
+CREATE TABLE IF NOT EXISTS Category (
+  id        TEXT PRIMARY KEY,
+  slug      TEXT NOT NULL UNIQUE,
+  nameFr    TEXT NOT NULL,
+  nameEn    TEXT NOT NULL,
+  position  INTEGER NOT NULL DEFAULT 0,
+  active    INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updatedAt TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+INSERT INTO Category (id, slug, nameFr, nameEn, position) VALUES
+  ('cat-homme', 'homme', 'Homme', 'Men', 1),
+  ('cat-femme', 'femme', 'Femme', 'Women', 2),
+  ('cat-couple-enfant', 'couple-enfant', 'Couple / enfant', 'Couple / kids', 3)
+ON CONFLICT (slug) DO NOTHING;
+UPDATE Product SET category = lower(category) WHERE category <> lower(category);
+
+-- Collections éditoriales : un produit peut appartenir à plusieurs collections.
+CREATE TABLE IF NOT EXISTS Collection (
+  id            TEXT PRIMARY KEY,
+  slug          TEXT NOT NULL UNIQUE,
+  nameFr        TEXT NOT NULL,
+  nameEn        TEXT NOT NULL,
+  descriptionFr TEXT,
+  descriptionEn TEXT,
+  position      INTEGER NOT NULL DEFAULT 0,
+  active        INTEGER NOT NULL DEFAULT 1,
+  createdAt     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updatedAt     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 CREATE TABLE IF NOT EXISTS ProductImage (
   id        TEXT PRIMARY KEY,
   productId TEXT NOT NULL REFERENCES Product(id) ON DELETE CASCADE,
@@ -84,6 +117,11 @@ CREATE TABLE IF NOT EXISTS ProductImage (
   isMain    INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_image_product ON ProductImage(productId);
+CREATE TABLE IF NOT EXISTS ProductCollection (
+  productId    TEXT NOT NULL REFERENCES Product(id) ON DELETE CASCADE,
+  collectionId TEXT NOT NULL REFERENCES Collection(id) ON DELETE CASCADE,
+  PRIMARY KEY (productId, collectionId)
+);
 
 CREATE TABLE IF NOT EXISTS ProductColor (
   id        TEXT PRIMARY KEY,
