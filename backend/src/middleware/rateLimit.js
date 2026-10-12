@@ -31,6 +31,16 @@ export const otpRequestLimiter = rateLimit({
   message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de demandes de code, réessayez dans quelques minutes.' } },
 });
 
+/** Commandes WhatsApp enregistrées sans compte : évite la création massive de commandes fictives. */
+export const whatsappOrderLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip,
+  message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de commandes WhatsApp, réessayez plus tard.' } },
+});
+
 /**
  * Limite générale sur l'API publique — filet de sécurité, pas la seule protection.
  */

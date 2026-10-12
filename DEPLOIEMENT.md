@@ -587,3 +587,29 @@ par e-mail ; aucune session n'est ouverte tant qu'il n'est pas saisi sur la page
 expiration du précédent (`OTP_TTL_MINUTES`, 5 min). Sans SMTP en production, l'inscription par e-mail répond 503 (`EMAIL_UNAVAILABLE`).
 Les comptes créés avant cette fonction doivent confirmer leur adresse à la prochaine connexion ; `npm run user:set-role` et
 `npm run user:make-admin` marquent l'adresse comme vérifiée (à utiliser pour les comptes ADMIN/DEV si le SMTP n'est pas encore prêt).
+
+## 10. Catalogue : catégories, collections, tendances
+
+- **Catégories** (admin › Catégories) : chaque catégorie active et non vide devient la route `/boutique/<slug>`, listée dans le menu et le pied de page.
+  « Nouveautés » n'est pas une catégorie : `/boutique/nouveautes` n'existe que tant qu'un produit actif a moins de 14 jours. Les anciens liens
+  `/boutique?categorie=…` redirigent vers les nouvelles routes. Un produit « Nouveautes » hérité d'avant cette version apparaît « À reclasser » dans l'admin.
+- **Meilleures ventes** : chaque route de catégorie précharge les 20 produits les plus vendus (commandes non annulées), « Voir plus » en ajoute 20.
+  Les filtres (tri, taille, couleur, prix) sont des paramètres d'URL traités par l'API ; leurs valeurs viennent de `GET /products/facets`.
+- **Collections** (admin › Collections, puis cases à cocher dans la fiche produit) : la section « Nos collections » de l'accueil s'affiche dès que
+  3 collections contiennent au moins un produit publié (meilleure vente de chacune), et `/collections/<slug>` liste leurs produits.
+- **Tendances du moment** (accueil) : les 4 premiers produits du top 10 des ventes (`GET /products/top`).
+- **Aperçu du formulaire produit** : le back-office embarque la page `/apercu-produit` (rendu réel de la carte et de la fiche, largeur mobile ou ordinateur).
+
+## 11. Commandes WhatsApp et toasts
+
+- **Bouton « Commander sur WhatsApp »** (fiche produit et panier) : enregistre une commande de canal `WHATSAPP` (`POST /api/v1/orders/whatsapp`, limité à
+  30 par heure et par IP, paiement à la remise, frais de livraison à 0 tant que l'adresse n'est pas connue), puis ouvre WhatsApp avec le message prêt :
+  référence, un bloc par produit (taille, couleur, prix) **avec le lien de sa fiche**, et le total. Si l'enregistrement échoue, le message part sans référence.
+  Le numéro vient de Admin › Paramètres › WhatsApp. Une zone de livraison active est nécessaire.
+- **Admin** : une commande WhatsApp ouverte depuis plus de 24 h déclenche un toast « Les produits ont-ils bien été livrés ? » (Oui, livrée / Pas encore, qui
+  repousse de 24 h / Annulée). « Oui » appelle `POST /api/v1/orders/:id/confirm-delivery` : étapes restantes parcourues, paiement à la remise soldé.
+- **Boutique** : un clic sur un onglet (catégorie, collection) ou un filtre fait défiler jusqu'à la liste de produits.
+- **Codes HTTP** : une catégorie, une collection ou un produit inconnu (ou brouillon) répond **404** ; l'ancien lien `/boutique?categorie=…` répond **308** vers
+  `/boutique/<slug>`. L'existence est vérifiée dans `proxy.ts` (résultat gardé 30 s) car le rendu des pages est déjà en streaming quand `notFound()` s'exécute :
+  le proxy doit donc pouvoir joindre l'API (`BACKEND_API_URL`). Vérification : `node audit/http-status-check.mjs`.
+- **Toast admin** : composant `toast` de shadcn/ui (`components/ui/toast.tsx`, inchangé), alimenté par `components/admin/delivery-confirmation-toasts.tsx`.

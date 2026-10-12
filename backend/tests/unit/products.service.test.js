@@ -112,14 +112,14 @@ describe('Nouveautés (automatiques)', () => {
 
     const news = await listProducts({ category: 'Nouveautes', status: 'active' });
     expect(news.items.map((item) => item.id)).toEqual([recent.id]);
-    expect(news.items[0]).toMatchObject({ isNew: true, category: 'Homme' });
+    expect(news.items[0]).toMatchObject({ isNew: true, category: 'homme' });
 
     const men = await listProducts({ category: 'Homme', status: 'active' });
-    expect(men.items.find((item) => item.id === old.id)).toMatchObject({ isNew: false, category: 'Homme' });
+    expect(men.items.find((item) => item.id === old.id)).toMatchObject({ isNew: false, category: 'homme' });
   });
 
   test('« Nouveautes » n’est pas une catégorie enregistrable', async () => {
-    const { createProductSchema } = await import('../../src/modules/products/products.schema.js');
-    expect(createProductSchema.shape.body.safeParse({ ...base, category: 'Nouveautes' }).success).toBe(false);
+    await expect(createProduct({ ...base, category: 'Nouveautes' })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(createProduct({ ...base, category: 'Inconnue' })).rejects.toMatchObject({ statusCode: 400 });
   });
 });

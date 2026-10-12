@@ -9,7 +9,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // /admin (sans locale) existe aussi : il ne doit pas hériter de l'en-tête boutique.
   // Back-office et supervision (équipe technique) : sans en-tête ni pied de page boutique.
-  const isAdmin = /^\/((fr|en)\/)?(admin|supervision)(\/|$)/.test(pathname);
+  const isAdmin = /^\/((fr|en)\/)?(admin|supervision|apercu-produit)(\/|$)/.test(pathname);
 
   if (isAdmin) return <>{children}</>;
 

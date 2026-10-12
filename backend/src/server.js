@@ -15,6 +15,8 @@ import { openDb } from "./db/client.js";
 import { metricsMiddleware, register } from "./config/metrics.js";
 import authRoutes from "./modules/auth/auth.route.js";
 import productsRoutes from "./modules/products/products.routes.js";
+import categoriesRoutes from "./modules/categories/categories.routes.js";
+import collectionsRoutes from "./modules/collections/collections.routes.js";
 import deliveryZonesRoutes from "./modules/delivery-zones/deliveryZones.route.js";
 import ordersRoutes from "./modules/orders/orders.routes.js";
 import reviewsRoutes from "./modules/reviews/reviews.routes.js";
@@ -73,6 +75,8 @@ app.get("/metrics", requireAuth, requireRole("ADMIN"), async (req, res) => {
 });
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productsRoutes);
+app.use("/api/v1/categories", categoriesRoutes);
+app.use("/api/v1/collections", collectionsRoutes);
 app.use("/api/v1/delivery-zones", deliveryZonesRoutes);
 app.use("/api/v1/orders", ordersRoutes);
 app.use("/api/v1/reviews", reviewsRoutes);

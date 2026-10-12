@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ArrowDown, ArrowUp, Eye, Minus, Pencil } from "lucide-react";
 import { backendRequest, hasSession, resolveMediaUrl, uploadProductImage } from "@/lib/backend-api";
 import { TablePagination, usePagination } from "@/components/admin/table-pagination";
+import { TaxonomyManager } from "@/components/admin/taxonomy-manager";
+import { DeliveryConfirmationToasts } from "@/components/admin/delivery-confirmation-toasts";
+import { ProductPreview } from "@/components/admin/product-preview";
+import type { CatalogApiProduct } from "@/lib/catalog-api";
 
 type TabId =
   | "overview"
@@ -14,6 +19,8 @@ type TabId =
   | "delivery"
   | "payment"
   | "reviews"
+  | "categories"
+  | "collections"
   | "content"
   | "settings";
 type OrderStatus = "pending" | "progress" | "done" | "cancel";
@@ -38,7 +45,11 @@ type Product = {
   sizes: string[];
   customizableColor: boolean;
   customizableMaterial: boolean;
+  collectionIds: string[];
+  isNew?: boolean;
 };
+
+type TaxonomyOption = { id: string; slug: string; nameFr: string; active: boolean };
 
 type DeliveryZone = {
   id: string;
@@ -64,6 +75,8 @@ type ApiProduct = {
   descriptionEn: string;
   colorCustomizable: boolean;
   materialCustomizable: boolean;
+  collectionIds?: string[];
+  isNew?: boolean;
   images?: { url: string; isMain?: boolean }[];
   colors?: { name: string; hex: string }[];
   sizes?: { size: string; available?: boolean }[];
@@ -76,8 +89,10 @@ type ApiOrder = {
   totalFcfa: number;
   createdAt: string;
   deliveryZoneId: string;
+  channel?: "WEB" | "WHATSAPP";
+  items?: { productNameFr: string; quantity: number; size?: string }[];
 };
-type AdminOrder = { uuid: string; id: string; client: string; date: string; zone: string; status: OrderStatus; rawStatus: string; total: string };
+type AdminOrder = { uuid: string; id: string; client: string; date: string; zone: string; status: OrderStatus; rawStatus: string; total: string; channel: "WEB" | "WHATSAPP"; createdAt: string; products: string };
 type PaymentTransactionInfo = { id: string; provider: string; reference: string; operatorReference: string | null; operator: string | null; status: string };
 type AdminReview = { id: string; productId: string; rating: number; comment: string; createdAt: string; status: string };
 type ContentPage = { id: string; slug: string; titleFr: string; titleEn?: string | null; bodyFr: string; bodyEn?: string | null };
@@ -99,6 +114,8 @@ const tabsConfig: NavItem[] = [
   },
   { id: "orders", label: "Commandes", iconClass: "fa-solid fa-clipboard-list" },
   { id: "products", label: "Produits", iconClass: "fa-solid fa-box-open" },
+  { id: "categories", label: "Catégories", iconClass: "fa-solid fa-tags" },
+  { id: "collections", label: "Collections", iconClass: "fa-solid fa-layer-group" },
   { id: "customers", label: "Clients", iconClass: "fa-solid fa-users" },
   { id: "delivery", label: "Livraison", iconClass: "fa-solid fa-truck" },
   { id: "payment", label: "Paiement", iconClass: "fa-solid fa-credit-card" },
@@ -121,11 +138,9 @@ const orderStatusClasses: Record<
 const overviewKpis: {
   label: string;
   value: string;
-  delta: string;
-  positive: boolean;
 }[] = [];
 
-const topProducts: { name: string; sales: number; percent: number }[] = [];
+const topProducts: { name: string; sales: number; percent: number; trend: number }[] = [];
 
 const alerts: string[] = [];
 
@@ -144,6 +159,19 @@ const STAFF_ROLES = ["ADMIN", "PRODUCT_MANAGER"];
  * un visiteur verrait le tableau de bord (avec ses données de démonstration) et une
  * cascade de 401/403.
  */
+/** Évolution des ventes d'un produit : flèche vers le haut (hausse), vers le bas (baisse) ou trait (stable). */
+function TrendIndicator({ trend, className = "" }: { trend: number; className?: string }) {
+  const direction = trend > 0 ? "up" : trend < 0 ? "down" : "flat";
+  const style = { up: "text-[#3f6b4a]", down: "text-[#a13b2f]", flat: "text-[#8a8378]" }[direction];
+  const label = { up: "En hausse", down: "En baisse", flat: "Stable" }[direction];
+  return (
+    <span className={`flex w-12 shrink-0 items-center justify-end gap-1 text-[11px] font-bold ${style} ${className}`} role="img" aria-label={`${label} (${trend > 0 ? "+" : ""}${trend} %)`}>
+      {direction === "up" ? <ArrowUp className="size-3.5" aria-hidden="true" /> : direction === "down" ? <ArrowDown className="size-3.5" aria-hidden="true" /> : <Minus className="size-3.5" aria-hidden="true" />}
+      {direction !== "flat" && <span>{Math.abs(trend)}%</span>}
+    </span>
+  );
+}
+
 export function AdminDashboard() {
   const loginHref = usePathname().startsWith("/en") ? "/en/compte/connexion" : "/fr/compte/connexion";
   const [access, setAccess] = useState<"checking" | "granted" | "denied">("checking");
@@ -180,9 +208,8 @@ function AdminDashboardContent() {
   const [productFilter, setProductFilter] = useState<
     "all" | "active" | "draft"
   >("all");
-  const [productPreviewTab, setProductPreviewTab] = useState<"card" | "pdp">(
-    "card",
-  );
+  // Mobile : un seul volet à la fois (formulaire ou aperçu), basculé par le bouton fixe en bas d'écran.
+  const [mobilePane, setMobilePane] = useState<"form" | "preview">("form");
   const [productLang, setProductLang] = useState<"fr" | "en">("fr");
   const [products, setProducts] = useState<Product[]>([]);
   const [adminOrders, setAdminOrders] = useState<AdminOrder[]>([]);
@@ -234,6 +261,21 @@ function AdminDashboardContent() {
     backendRequest<StoreSettings>("/settings").then(setStoreSettings).catch(() => undefined);
   }, []);
   const [savingProduct, setSavingProduct] = useState(false);
+  // Catégories et collections gérées en base : le formulaire produit ne propose que celles-là.
+  const [adminCategories, setAdminCategories] = useState<TaxonomyOption[]>([]);
+  const [adminCollections, setAdminCollections] = useState<TaxonomyOption[]>([]);
+  const reloadTaxonomy = async () => {
+    const [categoriesResult, collectionsResult] = await Promise.all([
+      backendRequest<{ items: TaxonomyOption[] }>("/categories/all"),
+      backendRequest<{ items: TaxonomyOption[] }>("/collections/all"),
+    ]);
+    setAdminCategories(categoriesResult.items);
+    setAdminCollections(collectionsResult.items);
+  };
+  useEffect(() => {
+    const timer = window.setTimeout(() => void reloadTaxonomy().catch(() => undefined), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const from = new Date();
@@ -280,6 +322,8 @@ function AdminDashboardContent() {
             sizes: product.sizes?.map((size) => size.size) ?? [],
             customizableColor: product.colorCustomizable,
             customizableMaterial: product.materialCustomizable,
+            collectionIds: product.collectionIds ?? [],
+            isNew: product.isNew,
           })),
         );
         setDeliveryZones(zones);
@@ -300,6 +344,9 @@ function AdminDashboardContent() {
                     : "progress",
               rawStatus: order.status,
             total: `${order.totalFcfa.toLocaleString("fr-FR")}f`,
+            channel: order.channel ?? "WEB",
+            createdAt: order.createdAt,
+            products: (order.items ?? []).map((item) => `${item.productNameFr} × ${item.quantity}`).join(", "),
           })),
         );
           setAdminReviews(reviewResult);
@@ -308,26 +355,18 @@ function AdminDashboardContent() {
           {
             label: "Commandes",
             value: String(kpis.orders),
-            delta: "Données backend",
-            positive: true,
           },
           {
             label: "Ventes (unités)",
             value: String(kpis.unitsSold),
-            delta: "Données backend",
-            positive: true,
           },
           {
             label: "Chiffre d'affaires",
             value: `${kpis.revenueFcfa.toLocaleString("fr-FR")}f`,
-            delta: "Données backend",
-            positive: true,
           },
           {
             label: "Panier moyen",
             value: `${kpis.averageBasketFcfa.toLocaleString("fr-FR")}f`,
-            delta: "Données backend",
-            positive: true,
           },
         ]);
         // Longueur de barre = part des ventes du meilleur produit (trendPercent mesure
@@ -338,6 +377,7 @@ function AdminDashboardContent() {
             name: item.productNameFr,
             sales: item.units,
             percent: Math.round((item.units / maxUnits) * 100),
+            trend: item.trendPercent,
           })),
         );
         setDashboardAlerts([
@@ -402,6 +442,25 @@ function AdminDashboardContent() {
     );
   };
 
+  /** Produit du formulaire, au format de l'API : le même mapper que la boutique en tire carte et fiche. */
+  const previewProduct = (product: Product): CatalogApiProduct => {
+    const category = adminCategories.find((item) => item.slug === product.category);
+    const slug = product.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "apercu";
+    return {
+      id: product.id === "new" ? "preview" : product.id,
+      slugFr: slug, slugEn: slug,
+      nameFr: product.name || "Nom du produit", nameEn: product.nameEn || product.name || "Product name",
+      descriptionFr: product.description || "Description du produit", descriptionEn: product.descriptionEn || product.description || "Product description",
+      category: product.category, categoryName: { fr: category?.nameFr ?? product.category, en: category?.nameFr ?? product.category },
+      isNew: product.id === "new" ? true : product.isNew,
+      price: Number(product.price.replace(/\D/g, "")) || 0, status: product.status === "out" ? "out_of_stock" : product.status,
+      materialCustomizable: showToggles.customizableMaterial,
+      images: product.images.map((url, index) => ({ url, isMain: index === 0 })),
+      colors: product.colors?.length ? product.colors.map((color, index) => (index === 0 ? { ...color, hex: product.color } : color)) : [{ name: "Couleur", hex: product.color }],
+      sizes: product.sizes.map((size) => ({ size, available: sizeAvailability[size] ?? true })),
+    };
+  };
+
   const selectProduct = async (productId: string) => {
     try {
       const product = await backendRequest<ApiProduct & { colors?: { name: string; hex: string }[]; sizes?: { size: string; available: boolean }[] }>(`/products/${productId}`);
@@ -422,6 +481,8 @@ function AdminDashboardContent() {
           sizes: product.sizes?.map((size) => size.size) ?? [],
           customizableColor: product.colorCustomizable,
           customizableMaterial: product.materialCustomizable,
+          collectionIds: product.collectionIds ?? [],
+          isNew: product.isNew,
         };
         return [mapped, ...current.filter((item) => item.id !== productId)];
       });
@@ -440,7 +501,7 @@ function AdminDashboardContent() {
       id: "new",
       name: "",
       nameEn: "",
-      category: "Homme",
+      category: adminCategories.find((category) => category.active)?.slug ?? "homme",
       price: "",
       compareAtPrice: "",
       status: "draft",
@@ -451,6 +512,8 @@ function AdminDashboardContent() {
       sizes: [],
       customizableColor: true,
       customizableMaterial: true,
+      collectionIds: [],
+      isNew: true,
     };
     setProducts((current) => [newProduct, ...current.filter((product) => product.id !== "new")]);
     setSelectedProductId(newProduct.id);
@@ -486,6 +549,7 @@ function AdminDashboardContent() {
           ? selectedProduct.colors.map((color, index) => (index === 0 ? { ...color, hex: selectedProduct.color } : color))
           : [{ name: "Couleur", hex: selectedProduct.color }],
         sizes: selectedProduct.sizes.map((size) => ({ size, available: sizeAvailability[size] ?? true })),
+        collectionIds: selectedProduct.collectionIds,
       };
       if (!payload.nameFr.trim() || !payload.nameEn.trim() || !payload.descriptionFr.trim() || !payload.descriptionEn.trim() || !price) {
         throw new Error("Complétez les noms, descriptions et le prix dans les deux langues.");
@@ -501,6 +565,7 @@ function AdminDashboardContent() {
         description: item.descriptionFr, descriptionEn: item.descriptionEn, color: item.colors?.[0]?.hex ?? "#14120F", colors: item.colors,
         images: item.images?.map((image) => image.url) ?? [], sizes: item.sizes?.map((size) => size.size) ?? [],
         customizableColor: item.colorCustomizable, customizableMaterial: item.materialCustomizable,
+        collectionIds: item.collectionIds ?? [], isNew: item.isNew,
       })));
       setSelectedProductId(saved.id);
       setProductMessage("Produit enregistré.");
@@ -677,6 +742,18 @@ function AdminDashboardContent() {
     updateSelectedProduct("sizes", nextSizes);
   };
 
+  // Mobile : chaque ligne de tableau devient une carte ; les libellés viennent des en-têtes de colonnes.
+  useEffect(() => {
+    document.querySelectorAll<HTMLTableElement>("table.admin-table").forEach((table) => {
+      const headers = Array.from(table.querySelectorAll("thead th")).map((header) => header.textContent?.trim() ?? "");
+      table.querySelectorAll("tbody tr").forEach((row) => {
+        Array.from(row.children).forEach((cell, index) => {
+          if (headers[index] && cell.getAttribute("data-label") !== headers[index]) cell.setAttribute("data-label", headers[index]);
+        });
+      });
+    });
+  });
+
   const renderPage = () => {
     if (activeTab === "overview") {
       return (
@@ -707,12 +784,6 @@ function AdminDashboardContent() {
                 <div className="font-(--font-fraunces) text-[27px] font-semibold leading-none tracking-[-0.01em]">
                   {item.value}
                 </div>
-                <div
-                  className="mt-2 text-[11px] font-semibold"
-                  style={{ color: item.positive ? "#3f6b4a" : "#a13b2f" }}
-                >
-                  {item.delta}
-                </div>
               </div>
             ))}
           </div>
@@ -735,17 +806,19 @@ function AdminDashboardContent() {
                   className="mb-2.5 flex items-center gap-3 last:mb-0"
                 >
                   <div className="h-6 w-6 shrink-0 rounded-[5px] bg-linear-to-br from-[#3a2c22] to-[#171310]" />
-                  <div className="w-56 shrink-0 truncate text-[12px] font-semibold" title={product.name}>
+                  <div className="min-w-0 flex-1 truncate text-[12px] font-semibold sm:w-56 sm:flex-none sm:shrink-0" title={product.name}>
                     {product.name}
                   </div>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#F3ECE6]">
+                  {/* Écran large : barre de part des ventes. Mobile : flèche d'évolution (hausse, baisse, stable). */}
+                  <div className="hidden h-2.5 flex-1 overflow-hidden rounded-full bg-[#F3ECE6] sm:block">
                     <div
                       className="h-full rounded-full bg-[#D2531E]"
                       style={{ width: `${product.percent}%` }}
                     />
                   </div>
+                  <TrendIndicator trend={product.trend} className="sm:hidden" />
                   <div className="w-20 shrink-0 text-right text-[11.5px] font-bold">
-                    {product.sales} ventes
+                    {product.sales} vente{product.sales > 1 ? "s" : ""}
                   </div>
                 </div>
               ))}
@@ -766,7 +839,7 @@ function AdminDashboardContent() {
                   Voir tout →
                 </button>
               </div>
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="admin-table w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="bg-[#F3ECE6]">
                     <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]">
@@ -874,7 +947,7 @@ function AdminDashboardContent() {
           </div>
 
           <div className="rounded-[10px] border border-[#E4DDD5] bg-white overflow-hidden">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="admin-table w-full border-collapse text-[12.5px]">
               <thead>
                 <tr className="bg-[#F3ECE6]">
                   <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]">
@@ -905,6 +978,7 @@ function AdminDashboardContent() {
                     <tr key={order.id} className="border-t border-[#E4DDD5]">
                       <td className="px-[14px] py-[12px] font-semibold">
                         {order.id}
+                        {order.channel === "WHATSAPP" && <span className="ml-2 inline-block rounded-full bg-[#e3f4ea] px-2 py-[2px] align-middle text-[9px] font-bold uppercase tracking-[0.04em] text-[#1f7a4d]">WhatsApp</span>}
                       </td>
                       <td className="px-[14px] py-[12px]">{order.client}</td>
                       <td className="px-[14px] py-[12px]">{order.date}</td>
@@ -1030,7 +1104,7 @@ function AdminDashboardContent() {
 
           {productView === "catalog" ? (
             <div className="overflow-hidden rounded-[10px] border border-[#E4DDD5] bg-white">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="admin-table w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="bg-[#F3ECE6]">
                     <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]" />
@@ -1062,7 +1136,7 @@ function AdminDashboardContent() {
                         {product.name}
                       </td>
                       <td className="px-[14px] py-[12px]">
-                        {product.category}
+                        {adminCategories.find((category) => category.slug === product.category)?.nameFr ?? product.category}
                       </td>
                       <td className="px-[14px] py-[12px]">{product.price}</td>
                       <td className="px-[14px] py-[12px]">
@@ -1095,8 +1169,9 @@ function AdminDashboardContent() {
               <TablePagination pagination={productsPage} label="produits" />
             </div>
           ) : (
-            <div className="grid gap-5 lg:grid-cols-[1.8fr_1fr]">
-              <div className="rounded-[10px] border border-[#E4DDD5] bg-white p-5">
+            <>
+            <div className="grid gap-5 pb-20 lg:grid-cols-[1.8fr_1fr] lg:pb-0">
+              <div className={`min-w-0 rounded-[10px] border border-[#E4DDD5] bg-white p-5 ${mobilePane === "preview" ? "hidden lg:block" : ""}`}>
                 <div className="mb-4 text-[13.5px] font-semibold">
                   Informations produit
                 </div>
@@ -1170,17 +1245,35 @@ function AdminDashboardContent() {
                       Catégorie
                     </label>
                     <select
-                      value={selectedProduct?.category ?? "Homme"}
+                      value={selectedProduct?.category ?? ""}
                       onChange={(event) =>
                         updateSelectedProduct("category", event.target.value)
                       }
                       className="w-full rounded-[6px] border border-[#E4DDD5] bg-white px-3 py-2 text-[12.5px] outline-none focus:border-[#D2531E]"
                     >
-                      {selectedProduct?.category === "Nouveautes" && <option value="Nouveautes" disabled>À reclasser (ancienne catégorie)</option>}
-                      <option value="Homme">Homme</option>
-                      <option value="Femme">Femme</option>
-                      <option value="Couple-Enfant">Couple / enfant</option>
+                      {selectedProduct && !adminCategories.some((category) => category.slug === selectedProduct.category) && <option value={selectedProduct.category} disabled>À reclasser (ancienne catégorie)</option>}
+                      {adminCategories.filter((category) => category.active || category.slug === selectedProduct?.category).map((category) => <option key={category.id} value={category.slug}>{category.nameFr}</option>)}
                     </select>
+                  </div>
+                  <div className="col-span-full">
+                    <label className="mb-2 block text-[10.5px] font-bold uppercase tracking-[0.04em] text-[#8a8378]">
+                      Collections
+                    </label>
+                    {adminCollections.length === 0 ? (
+                      <p className="text-[11.5px] text-[#8a8378]">Aucune collection : créez-en depuis l&apos;onglet Collections.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {adminCollections.map((collection) => {
+                          const checked = selectedProduct?.collectionIds.includes(collection.id) ?? false;
+                          return (
+                            <label key={collection.id} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-[11.5px] font-semibold ${checked ? "border-[#14120F] bg-[#14120F] text-white" : "border-[#E4DDD5] bg-white text-[#14120F]"}`}>
+                              <input type="checkbox" className="sr-only" checked={checked} onChange={() => selectedProduct && updateSelectedProduct("collectionIds", checked ? selectedProduct.collectionIds.filter((id) => id !== collection.id) : [...selectedProduct.collectionIds, collection.id])} />
+                              {collection.nameFr}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="mb-2 block text-[10.5px] font-bold uppercase tracking-[0.04em] text-[#8a8378]">
@@ -1340,86 +1433,30 @@ function AdminDashboardContent() {
                 {productMessage && <p className="mt-3 text-[12px] text-[#8a8378]" role="status">{productMessage}</p>}
               </div>
 
-              <div className="rounded-[10px] border border-[#E4DDD5] bg-white p-5">
+              <div className={`min-w-0 rounded-[10px] border border-[#E4DDD5] bg-white p-5 ${mobilePane === "form" ? "hidden lg:block" : ""}`}>
                 <div className="mb-4 text-[13.5px] font-semibold">
                   Aperçu en temps réel
                 </div>
-                <div className="mb-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setProductPreviewTab("card")}
-                    className={`rounded-[6px] border px-[12px] py-[7px] text-[11.5px] font-semibold ${productPreviewTab === "card" ? "border-[#14120F] bg-[#14120F] text-white" : "border-[#E4DDD5] bg-white text-[#14120F]"}`}
-                  >
-                    Carte catalogue
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProductPreviewTab("pdp")}
-                    className={`rounded-[6px] border px-[12px] py-[7px] text-[11.5px] font-semibold ${productPreviewTab === "pdp" ? "border-[#14120F] bg-[#14120F] text-white" : "border-[#E4DDD5] bg-white text-[#14120F]"}`}
-                  >
-                    Fiche produit
-                  </button>
-                </div>
-                <div className="mb-3 text-[10.5px] italic text-[#8a8378]">
-                  Utilise les vrais composants du site public
-                </div>
-
-                {productPreviewTab === "card" ? (
-                  <div className="mx-auto w-[220px] overflow-hidden rounded-[8px] border border-[#E4DDD5] bg-white">
-                    <div className="h-[150px] bg-linear-to-br from-[#3a2c22] to-[#171310]" />
-                    <div className="p-[12px]">
-                      <div className="font-(--font-fraunces) text-[13.5px] font-semibold">
-                        Multicolore Black and White
-                      </div>
-                      <div className="mt-[2px] text-[11.5px] text-[#8a8378]">
-                        6 500 FCFA
-                      </div>
-                      <div className="mt-2 flex gap-[5px]">
-                        {[
-                          selectedProduct?.color ?? "#161616",
-                          "#8B4A2B",
-                          "#D2531E",
-                        ].map((color) => (
-                          <span
-                            key={color}
-                            className="h-[12px] w-[12px] rounded-full border border-[#E4DDD5]"
-                            style={{ background: color }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-4">
-                    <div className="h-[190px] w-[170px] shrink-0 rounded-[8px] bg-linear-to-br from-[#3a2c22] to-[#171310]" />
-                    <div>
-                      <div className="font-(--font-fraunces) text-[16px] font-semibold">
-                        {selectedProduct?.name ?? "Produit"}
-                      </div>
-                      <div className="mt-[6px] text-[14px] font-bold text-[#14120F]">
-                        {selectedProduct?.price ?? "6 500 FCFA"}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-[5px]">
-                        {(selectedProduct?.sizes ?? []).map((size) => (
-                          <span
-                            key={size}
-                            className="rounded-[4px] border border-[#E4DDD5] px-[7px] py-[3px] text-[9px]"
-                          >
-                            {size}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="mt-4 inline-block rounded-[6px] bg-[#D2531E] px-[16px] py-[8px] text-[10px] font-bold text-white">
-                        Ajouter au panier
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {selectedProduct && <ProductPreview product={previewProduct(selectedProduct)} />}
               </div>
             </div>
+            <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 lg:hidden" role="tablist" aria-label="Volet affiché">
+              <div className="flex rounded-full bg-[#14120F] p-1 shadow-[0_8px_24px_rgba(20,18,15,.35)]">
+                {([["form", "Formulaire", Pencil], ["preview", "Aperçu", Eye]] as const).map(([pane, label, Icon]) => (
+                  <button key={pane} type="button" role="tab" aria-selected={mobilePane === pane} onClick={() => { setMobilePane(pane); document.querySelector("main")?.scrollTo({ top: 0 }); }} className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-[12.5px] font-bold transition ${mobilePane === pane ? "bg-white text-[#14120F]" : "text-white/70"}`}>
+                    <Icon className="size-3.5" aria-hidden="true" /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            </>
           )}
         </div>
       );
+    }
+
+    if (activeTab === "categories" || activeTab === "collections") {
+      return <TaxonomyManager key={activeTab} kind={activeTab} onChange={() => void reloadTaxonomy()} />;
     }
 
     if (activeTab === "customers") {
@@ -1437,7 +1474,7 @@ function AdminDashboardContent() {
           </div>
 
           <div className="overflow-hidden rounded-[10px] border border-[#E4DDD5] bg-white">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="admin-table w-full border-collapse text-[12.5px]">
               <thead>
                 <tr className="bg-[#F3ECE6]">
                   <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]">
@@ -1557,7 +1594,7 @@ function AdminDashboardContent() {
           )}
 
           <div className="overflow-hidden rounded-[10px] border border-[#E4DDD5] bg-white">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="admin-table w-full border-collapse text-[12.5px]">
               <thead>
                 <tr className="bg-[#F3ECE6]">
                   <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]">
@@ -1700,7 +1737,7 @@ function AdminDashboardContent() {
                 Gérer les zones →
               </button>
             </div>
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="admin-table w-full border-collapse text-[12.5px]">
               <thead>
                 <tr className="bg-[#F3ECE6]">
                   <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]">
@@ -1924,7 +1961,7 @@ function AdminDashboardContent() {
               Utilisateurs &amp; rôles
             </h3>
             <div className="overflow-hidden rounded-[10px] border border-[#E4DDD5] bg-white">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="admin-table w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="bg-[#F3ECE6]">
                     <th className="px-[14px] py-[10px] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8378]">
@@ -2020,7 +2057,7 @@ function AdminDashboardContent() {
           </div>
 
           <div className="px-2.5 py-3.5">
-            {tabsConfig.slice(0, 4).map((tab) => (
+            {tabsConfig.slice(0, 6).map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -2042,7 +2079,7 @@ function AdminDashboardContent() {
             <div className="px-2.5 pb-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/40">
               Configuration
             </div>
-            {tabsConfig.slice(4).map((tab) => (
+            {tabsConfig.slice(6).map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -2093,6 +2130,10 @@ function AdminDashboardContent() {
           </header>
 
           <main className="min-h-0 flex-1 overflow-y-auto">{renderPage()}</main>
+          <DeliveryConfirmationToasts
+            orders={adminOrders.filter((order) => order.channel === "WHATSAPP" && order.rawStatus !== "DELIVERED" && order.rawStatus !== "CANCELLED").map((order) => ({ uuid: order.uuid, reference: order.id, client: order.client, createdAt: order.createdAt, products: order.products }))}
+            onClosed={(uuid, status) => setAdminOrders((current) => current.map((order) => (order.uuid === uuid ? { ...order, rawStatus: status, status: status === "DELIVERED" ? "done" : "cancel" } : order)))}
+          />
         </div>
       </div>
     </div>

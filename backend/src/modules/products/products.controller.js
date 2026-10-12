@@ -6,6 +6,16 @@ export async function list(req, res) {
   res.json(await productsService.listProducts(req.query));
 }
 
+export async function facets(req, res) {
+  res.json(await productsService.getFacets(req.query));
+}
+
+/** Meilleures ventes (tendances du moment : la boutique n'en affiche que les premières). */
+export async function top(req, res) {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+  res.json(await productsService.listProducts({ status: 'active', sort: 'popular', pageSize: limit }));
+}
+
 export async function getBySlug(req, res) {
   const locale = req.query.locale === 'en' ? 'en' : 'fr';
   res.json(await productsService.getProductBySlug(req.params.slug, locale));

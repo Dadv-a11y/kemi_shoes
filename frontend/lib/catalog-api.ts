@@ -1,4 +1,4 @@
-import { BASE_MATERIAL, type Locale, type Product, type ProductCategory } from "@/lib/catalog";
+import { BASE_MATERIAL, type Locale, type Product } from "@/lib/catalog";
 import { resolveMediaUrl } from "@/lib/backend-api";
 
 export type CatalogApiProduct = {
@@ -10,6 +10,7 @@ export type CatalogApiProduct = {
   descriptionFr: string;
   descriptionEn: string;
   category: string;
+  categoryName?: { fr: string; en: string };
   isNew?: boolean;
   price: number;
   status: string;
@@ -25,12 +26,6 @@ type CatalogListResponse = {
 
 const apiUrl = process.env.BACKEND_API_URL ?? process.env.NEXT_PUBLIC_BACKEND_API_URL ?? "http://localhost:4000/api/v1";
 
-function mapCategory(category: string): ProductCategory {
-  const normalized = category.toLowerCase().replace("é", "e");
-  if (normalized === "femme" || normalized === "homme" || normalized === "couple-enfant") return normalized;
-  return "nouveautes";
-}
-
 export function mapProduct(product: CatalogApiProduct): Product {
   const images = product.images ?? [];
   const ordered = [...images].sort((a, b) => Number(Boolean(b.isMain)) - Number(Boolean(a.isMain))).map((item) => resolveMediaUrl(item.url));
@@ -43,9 +38,9 @@ export function mapProduct(product: CatalogApiProduct): Product {
     price: product.price,
     image,
     images: ordered.length ? ordered : [image],
-    category: mapCategory(product.category),
+    category: product.category,
+    categoryName: product.categoryName ?? { fr: product.category, en: product.category },
     isNew: Boolean(product.isNew),
-    displayCategory: product.isNew ? "nouveautes" : mapCategory(product.category),
     colors: (product.colors ?? []).map((color) => color.hex),
     colorOptions: product.colors ?? [],
     material: { fr: BASE_MATERIAL.fr, en: BASE_MATERIAL.en },
@@ -66,16 +61,46 @@ async function request<T>(path: string): Promise<T | null> {
   }
 }
 
-export async function getCatalogProducts(category?: ProductCategory): Promise<Product[]> {
-  const backendCategory = category ? {
-    homme: "Homme",
-    femme: "Femme",
-    nouveautes: "Nouveautes",
-    "couple-enfant": "Couple-Enfant",
-  }[category] : undefined;
-  // Le catalogue public n'affiche que les produits publiés (pas les brouillons).
-  const query = `?status=active&pageSize=100${backendCategory ? `&category=${encodeURIComponent(backendCategory)}` : ""}`;
-  const result = await request<CatalogListResponse>(`/products${query}`);
+export type StoreCategory = { id: string; slug: string; nameFr: string; nameEn: string; count: number; virtual: boolean };
+export type StoreCollection = { id: string; slug: string; nameFr: string; nameEn: string; descriptionFr?: string | null; descriptionEn?: string | null; count: number; bestProduct: Product | null };
+export type CatalogFacets = { sizes: string[]; colors: { name: string; hex: string }[]; minPrice: number | null; maxPrice: number | null };
+export type CatalogQuery = { category?: string; collection?: string; sort?: "popular" | "newest" | "priceAsc" | "priceDesc"; size?: string; color?: string; minPrice?: number; maxPrice?: number; pageSize?: number };
+
+/** Paramètres d'URL de l'API à partir d'un filtre (valeurs absentes ignorées). */
+function toQuery(query: CatalogQuery) {
+  const params = new URLSearchParams({ status: "active", pageSize: String(query.pageSize ?? 100) });
+  for (const [key, value] of Object.entries({ category: query.category, collection: query.collection, sort: query.sort, size: query.size, color: query.color, minPrice: query.minPrice, maxPrice: query.maxPrice })) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  return params;
+}
+
+/** Catégories visibles en boutique (avec « Nouveautés » seulement si elle contient des produits). */
+export async function getStoreCategories(): Promise<StoreCategory[]> {
+  return (await request<{ items: StoreCategory[] }>("/categories"))?.items ?? [];
+}
+
+export async function getStoreCollections(): Promise<{ items: StoreCollection[]; showcase: boolean }> {
+  const result = await request<{ items: (Omit<StoreCollection, "bestProduct"> & { bestProduct: CatalogApiProduct | null })[]; showcase: boolean }>("/collections");
+  return { showcase: Boolean(result?.showcase), items: (result?.items ?? []).map((item) => ({ ...item, bestProduct: item.bestProduct ? mapProduct(item.bestProduct) : null })) };
+}
+
+export async function getCatalogFacets(scope: { category?: string; collection?: string } = {}): Promise<CatalogFacets> {
+  const params = new URLSearchParams();
+  if (scope.category) params.set("category", scope.category);
+  if (scope.collection) params.set("collection", scope.collection);
+  return (await request<CatalogFacets>(`/products/facets?${params}`)) ?? { sizes: [], colors: [], minPrice: null, maxPrice: null };
+}
+
+/** Produits du catalogue public, filtrés et triés par l'API (le tri « popular » = meilleures ventes). */
+export async function getCatalogProducts(query: CatalogQuery = {}): Promise<{ items: Product[]; total: number }> {
+  const result = await request<CatalogListResponse & { total?: number }>(`/products?${toQuery(query)}`);
+  return { items: result?.items.map(mapProduct) ?? [], total: result?.total ?? result?.items.length ?? 0 };
+}
+
+/** Top des ventes (tendances du moment). */
+export async function getTopProducts(limit = 10): Promise<Product[]> {
+  const result = await request<CatalogListResponse>(`/products/top?limit=${limit}`);
   return result?.items.map(mapProduct) ?? [];
 }
 

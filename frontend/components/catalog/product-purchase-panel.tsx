@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 import { addToCart, savePreferences } from "@/lib/cart";
+import { orderOnWhatsapp } from "@/lib/whatsapp";
 
 // Repli si le produit ne renvoie ni tailles ni couleurs (ne devrait pas arriver avec l'API).
 const FALLBACK_SIZES = ["38", "39", "40", "41", "42", "43"];
@@ -20,6 +22,8 @@ export function ProductPurchasePanel({ productId, slug, name, price, image, addL
   const [selectedMaterial, setSelectedMaterial] = useState(materialValue);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
+  const locale = usePathname().split("/").filter(Boolean)[0] === "en" ? "en" : "fr";
 
   const updatePreference = (preference: { size?: string; color?: string; material?: string }) => {
     const next = { size: preference.size ?? selectedSize, color: preference.color ?? selectedColor, material: preference.material ?? selectedMaterial };
@@ -36,6 +40,14 @@ export function ProductPurchasePanel({ productId, slug, name, price, image, addL
     window.setTimeout(() => setAdded(false), 1800);
   };
 
+  // Commande par WhatsApp : même sélection que l'ajout au panier, message avec le lien de la fiche produit.
+  const handleWhatsapp = async () => {
+    if (!productId || !availableSizes.includes(selectedSize) || sendingWhatsapp) return;
+    setSendingWhatsapp(true);
+    try { await orderOnWhatsapp([{ productId, slug, name, size: selectedSize, color: selectedColor, material: selectedMaterial, quantity, price }], locale); }
+    finally { setSendingWhatsapp(false); }
+  };
+
   return (
     <div className="purchase-panel">
       <fieldset className="option-group"><legend>{colorLabel}</legend><div className="option-row">{colors.map(({ name: color, hex }) => <button type="button" key={color} onClick={() => updatePreference({ color })} className={cn("color-option", selectedColor === color && "option-selected")}><span className="color-swatch" style={{ backgroundColor: hex }} />{color}{selectedColor === color && <Check aria-hidden="true" />}</button>)}</div></fieldset>
@@ -43,7 +55,7 @@ export function ProductPurchasePanel({ productId, slug, name, price, image, addL
       <fieldset className="option-group"><legend>{sizeLabel}</legend><div className="size-row">{displayedSizes.map((size) => { const unavailable = unavailableSizes.includes(size) || !availableSizes.includes(size); return <button type="button" disabled={unavailable} key={size} onClick={() => updatePreference({ size })} className={cn("size-option", selectedSize === size && "option-selected", unavailable && "size-unavailable")}>{size}</button>; })}</div><p className="size-note">Les tailles disponibles varient selon le modèle.</p></fieldset>
       <div className="quantity-row"><span>{quantityLabel}</span><div className="quantity-control"><Button type="button" variant="outline" size="icon-sm" aria-label="Diminuer la quantité" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus aria-hidden="true" /></Button><span>{quantity}</span><Button type="button" variant="outline" size="icon-sm" aria-label="Augmenter la quantité" onClick={() => setQuantity(quantity + 1)}><Plus aria-hidden="true" /></Button></div></div>
       <Button type="button" size="lg" className="purchase-button" disabled={!availableSizes.includes(selectedSize)} onClick={handleAdd}><ShoppingBag data-icon="inline-start" />{added ? "Ajouté au panier" : addLabel}</Button>
-      <Button type="button" variant="outline" size="lg" className="whatsapp-button">{whatsappLabel}</Button>
+      <Button type="button" variant="outline" size="lg" className="whatsapp-button" disabled={!availableSizes.includes(selectedSize) || sendingWhatsapp} onClick={() => void handleWhatsapp()}>{whatsappLabel}</Button>
     </div>
   );
 }

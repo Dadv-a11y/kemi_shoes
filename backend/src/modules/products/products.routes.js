@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { uploadProductImage } from './products.upload.js';
 import {
   createProductSchema, updateProductSchema, listProductsSchema,
-  productIdSchema, sizeAvailabilitySchema,
+  productIdSchema, sizeAvailabilitySchema, facetsSchema,
 } from './products.schema.js';
 
 const router = Router();
@@ -13,6 +13,8 @@ const canManageProducts = requireRole('ADMIN', 'PRODUCT_MANAGER');
 
 // --- Public (catalogue boutique) ---
 router.get('/', validate(listProductsSchema), controller.list);
+router.get('/facets', validate(facetsSchema), controller.facets);
+router.get('/top', controller.top);
 router.get('/slug/:slug', controller.getBySlug);
 router.get('/:id', validate(productIdSchema), controller.getById);
 

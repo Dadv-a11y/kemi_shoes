@@ -3,38 +3,39 @@ import { get, all, run, transaction } from '../../db/client.js';
 import { notFound, badRequest, conflict } from '../../middleware/errorHandler.js';
 import { merchantClient } from '../integrations/googleMerchant.js';
 import { logger } from '../../config/logger.js';
-
-function slugify(text) {
-  return text
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
+import { slugify } from '../../utils/slug.js';
+import { NEW_PRODUCT_DAYS } from './products.constants.js';
+import { resolveCategorySlug, NEW_CATEGORY_SLUG } from '../categories/categories.service.js';
+import { getCategoryBySlug } from '../categories/categories.service.js';
+import { assertCollectionsExist } from '../collections/collections.service.js';
 
 async function getRelations(productId) {
-  const [images, colors, sizes] = await Promise.all([
+  const [images, colors, sizes, collections] = await Promise.all([
     all(`SELECT * FROM ProductImage WHERE productId = ? ORDER BY position ASC`, [productId]),
     all(`SELECT * FROM ProductColor WHERE productId = ?`, [productId]),
     all(`SELECT * FROM ProductSize WHERE productId = ?`, [productId]),
+    all(`SELECT collectionId FROM ProductCollection WHERE productId = ?`, [productId]),
   ]);
-  return { images, colors, sizes };
+  return { images, colors, sizes, collectionIds: collections.map((row) => row.collectionId) };
 }
 
 // Les indicateurs sont stockés en INTEGER (0/1) : l'API les expose en booléens,
 // format attendu par le schéma de mise à jour (sinon le back-office, qui renvoie
 // le produit tel que lu, voyait chaque modification refusée en 400).
-/** Durée pendant laquelle un produit récemment ajouté est présenté comme « Nouveautés ». */
-export const NEW_PRODUCT_DAYS = 14;
+export { NEW_PRODUCT_DAYS };
 const newSince = () => new Date(Date.now() - NEW_PRODUCT_DAYS * 24 * 60 * 60 * 1000).toISOString();
 const isRecent = (createdAt) => new Date(createdAt).getTime() >= Date.now() - NEW_PRODUCT_DAYS * 24 * 60 * 60 * 1000;
 
 async function hydrate(product) {
   if (!product) return null;
-  const { images, colors, sizes } = await getRelations(product.id);
+  const [{ images, colors, sizes, collectionIds }, category] = await Promise.all([getRelations(product.id), getCategoryBySlug(product.category)]);
   return {
     ...product,
+    // Libellés de la catégorie (gérée en base) : la boutique n'a pas à les connaître.
+    categoryName: { fr: category?.nameFr ?? product.category, en: category?.nameEn ?? product.category },
     isNew: isRecent(product.createdAt),
+    unitsSold: Number(product.unitsSold ?? 0),
+    collectionIds,
     colorCustomizable: Boolean(product.colorCustomizable),
     materialCustomizable: Boolean(product.materialCustomizable),
     images: images.map((image) => ({ ...image, isMain: Boolean(image.isMain) })),
@@ -56,24 +57,69 @@ async function syncToMerchantSafely(product, relations) {
   }
 }
 
-export async function listProducts({ category, status, page = 1, pageSize = 20 } = {}) {
+const SORTS = {
+  newest: 'p.createdAt DESC',
+  priceAsc: 'p.price ASC, p.createdAt DESC',
+  priceDesc: 'p.price DESC, p.createdAt DESC',
+  // Meilleures ventes : unités vendues (commandes non annulées), puis les plus récents.
+  popular: 'COALESCE(s.units, 0) DESC, p.createdAt DESC',
+};
+
+const SALES_JOIN = `LEFT JOIN (
+  SELECT oi.productId, SUM(oi.quantity) AS units FROM OrderItem oi JOIN "Order" o ON o.id = oi.orderId
+  WHERE o.status <> 'CANCELLED' GROUP BY oi.productId
+) s ON s.productId = p.id`;
+
+/** Conditions SQL communes à la liste et aux facettes (alias de table : p). */
+function productFilters({ category, status, size, color, minPrice, maxPrice, collection }) {
   const conditions = [];
   const params = [];
-  if (category === 'Nouveautes') { conditions.push('createdAt >= ?'); params.push(newSince()); }
-  else if (category) { conditions.push('category = ?'); params.push(category); }
-  if (status) { conditions.push('status = ?'); params.push(status); }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  if (category === NEW_CATEGORY_SLUG || category === 'Nouveautes') {
+    conditions.push('p.createdAt >= ?');
+    params.push(newSince());
+  } else if (category) {
+    conditions.push('p.category = ?');
+    params.push(slugify(category));
+  }
+  if (status) { conditions.push('p.status = ?'); params.push(status); }
+  if (size) { conditions.push('EXISTS (SELECT 1 FROM ProductSize ps WHERE ps.productId = p.id AND ps.size = ? AND ps.available = 1)'); params.push(size); }
+  if (color) { conditions.push('EXISTS (SELECT 1 FROM ProductColor pc WHERE pc.productId = p.id AND lower(pc.name) = lower(?))'); params.push(color); }
+  if (minPrice !== undefined) { conditions.push('p.price >= ?'); params.push(minPrice); }
+  if (maxPrice !== undefined) { conditions.push('p.price <= ?'); params.push(maxPrice); }
+  if (collection) { conditions.push('EXISTS (SELECT 1 FROM ProductCollection pcol JOIN Collection col ON col.id = pcol.collectionId WHERE pcol.productId = p.id AND col.slug = ?)'); params.push(collection); }
+  return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', params };
+}
 
+export async function listProducts({ page = 1, pageSize = 20, sort = 'newest', ...filters } = {}) {
+  const { where, params } = productFilters(filters);
   const offset = (page - 1) * pageSize;
   const items = (await all(
-    `SELECT * FROM Product ${where} ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
+    `SELECT p.*, COALESCE(s.units, 0) AS unitsSold FROM Product p ${SALES_JOIN} ${where} ORDER BY ${SORTS[sort] ?? SORTS.newest} LIMIT ? OFFSET ?`,
     [...params, pageSize, offset]
   )).map((product) => hydrate(product));
 
   const [{ total }, hydratedItems] = await Promise.all([
-    get(`SELECT COUNT(*) as total FROM Product ${where}`, params), Promise.all(items),
+    get(`SELECT COUNT(*) as total FROM Product p ${where}`, params), Promise.all(items),
   ]);
   return { items: hydratedItems, total: Number(total), page, pageSize };
+}
+
+/** Valeurs de filtre réellement disponibles (tailles en stock, couleurs, fourchette de prix) pour un périmètre. */
+export async function getFacets(filters = {}) {
+  const { where, params } = productFilters({ status: 'active', ...filters, size: undefined, color: undefined, minPrice: undefined, maxPrice: undefined });
+  const scope = `SELECT p.id FROM Product p ${where}`;
+  const [sizes, colors, price] = await Promise.all([
+    all(`SELECT DISTINCT ps.size FROM ProductSize ps WHERE ps.available = 1 AND ps.productId IN (${scope})`, params),
+    all(`SELECT lower(pc.name) AS key, MIN(pc.name) AS name, MIN(pc.hex) AS hex FROM ProductColor pc WHERE pc.productId IN (${scope}) GROUP BY lower(pc.name) ORDER BY MIN(pc.name)`, params),
+    get(`SELECT MIN(p.price) AS min, MAX(p.price) AS max FROM Product p ${where}`, params),
+  ]);
+  const byNumber = (a, b) => Number(a) - Number(b) || String(a).localeCompare(String(b));
+  return {
+    sizes: sizes.map((row) => row.size).sort(byNumber),
+    colors: colors.map(({ name, hex }) => ({ name, hex })),
+    minPrice: price?.min === null || price?.min === undefined ? null : Number(price.min),
+    maxPrice: price?.max === null || price?.max === undefined ? null : Number(price.max),
+  };
 }
 
 export async function getProductById(id) {
@@ -90,7 +136,9 @@ export async function getProductBySlug(slug, locale = 'fr') {
 }
 
 export async function createProduct(input) {
-  const { images = [], colors = [], sizes = [], ...data } = input;
+  const { images = [], colors = [], sizes = [], collectionIds = [], ...data } = input;
+  data.category = await resolveCategorySlug(data.category);
+  await assertCollectionsExist(collectionIds);
   const id = randomUUID();
   const slugFr = data.slugFr || slugify(data.nameFr);
   const slugEn = data.slugEn || slugify(data.nameEn || data.nameFr);
@@ -128,6 +176,9 @@ export async function createProduct(input) {
         [randomUUID(), id, s.size, s.available === false ? 0 : 1]
       );
     }
+    for (const collectionId of new Set(collectionIds)) {
+      await query(`INSERT INTO ProductCollection (productId, collectionId) VALUES (?, ?)`, [id, collectionId]);
+    }
   });
 
   const product = await getProductById(id);
@@ -139,7 +190,9 @@ export async function updateProduct(id, input) {
   const existing = await get(`SELECT * FROM Product WHERE id = ?`, [id]);
   if (!existing) throw notFound('Produit introuvable.');
 
-  const { images, colors, sizes, ...data } = input;
+  const { images, colors, sizes, collectionIds, ...data } = input;
+  if (data.category !== undefined) data.category = await resolveCategorySlug(data.category);
+  if (collectionIds) await assertCollectionsExist(collectionIds);
   const merged = { ...existing, ...data };
 
   await transaction(async ({ query }) => {
@@ -171,6 +224,12 @@ export async function updateProduct(id, input) {
         [randomUUID(), id, c.name, c.hex]
       );
     }
+    }
+    if (collectionIds) {
+      await query(`DELETE FROM ProductCollection WHERE productId = ?`, [id]);
+      for (const collectionId of new Set(collectionIds)) {
+        await query(`INSERT INTO ProductCollection (productId, collectionId) VALUES (?, ?)`, [id, collectionId]);
+      }
     }
     if (sizes) {
       await query(`DELETE FROM ProductSize WHERE productId = ?`, [id]);

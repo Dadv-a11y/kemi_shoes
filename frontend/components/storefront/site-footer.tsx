@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { backendRequest } from "@/lib/backend-api";
+import { useStoreCategories } from "@/lib/use-store-categories";
 
 type StoreSettings = { whatsapp: string; instagram: string; facebook: string; address: string; email: string };
 
@@ -13,6 +14,7 @@ export function SiteFooter() {
   const pathname = usePathname();
   const locale = pathname.split("/").filter(Boolean)[0] === "en" ? "en" : "fr";
   const prefix = `/${locale}`;
+  const categories = useStoreCategories();
   const [settings, setSettings] = useState(defaultSettings);
   useEffect(() => {
     // Coordonnées éditables dans Admin > Paramètres ; valeurs par défaut si vides.
@@ -24,7 +26,7 @@ export function SiteFooter() {
 
   return (
     <footer className="site-footer">
-      <div className="footer-top"><div className="footer-brand"><span className="logo">KEMI <span>SHOES</span></span><p>Sandales en cuir assemblées à la main à Douala, Cameroun. Livraison nationale et internationale.</p></div><div className="footer-col"><h4>Boutique</h4><Link href={`${prefix}/boutique?categorie=homme`}>Sandales Homme</Link><Link href={`${prefix}/boutique?categorie=femme`}>Sandales Femme</Link><Link href={`${prefix}/boutique?categorie=nouveautes`}>Nouveautés</Link><Link href={`${prefix}/boutique?categorie=couple-enfant`}>Couple & Enfant</Link></div><div className="footer-col"><h4>Aide</h4><Link href={`${prefix}/cgv`}>Livraison & retours</Link><Link href={`${prefix}/compte`}>Suivre ma commande</Link><a href={settings.email ? `mailto:${settings.email}` : `https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`}>Contact</a></div><div className="footer-col"><h4>Contact</h4><Link href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`}>WhatsApp</Link><Link href={settings.instagram}><i className="fa-brands fa-instagram" aria-hidden="true" /> Instagram</Link><Link href={settings.facebook}><i className="fa-brands fa-facebook" aria-hidden="true" /> Facebook</Link><span>{settings.address}</span></div></div>
+      <div className="footer-top"><div className="footer-brand"><span className="logo">KEMI <span>SHOES</span></span><p>Sandales en cuir assemblées à la main à Douala, Cameroun. Livraison nationale et internationale.</p></div><div className="footer-col"><h4>Boutique</h4>{categories.map((category) => <Link key={category.slug} href={`${prefix}/boutique/${category.slug}`}>{locale === "en" ? category.nameEn : category.nameFr}</Link>)}</div><div className="footer-col"><h4>Aide</h4><Link href={`${prefix}/cgv`}>Livraison & retours</Link><Link href={`${prefix}/compte`}>Suivre ma commande</Link><a href={settings.email ? `mailto:${settings.email}` : `https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`}>Contact</a></div><div className="footer-col"><h4>Contact</h4><Link href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`}>WhatsApp</Link><Link href={settings.instagram}><i className="fa-brands fa-instagram" aria-hidden="true" /> Instagram</Link><Link href={settings.facebook}><i className="fa-brands fa-facebook" aria-hidden="true" /> Facebook</Link><span>{settings.address}</span></div></div>
       <div className="footer-bottom"><small>© 2026 KEMI SHOES — Tous droits réservés</small><small><Link href={`${prefix}/mentions-legales`}>{legal.notice}</Link> · <Link href={`${prefix}/cgv`}>{legal.terms}</Link> · <Link href={`${prefix}/confidentialite`}>{legal.privacy}</Link></small><small>{legal.madeBy} <a href="https://nexa-digitallab.com" target="_blank" rel="noopener noreferrer">Nexa Digital</a></small></div>
     </footer>
   );

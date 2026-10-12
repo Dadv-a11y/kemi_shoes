@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { backendRequest, hasSession } from "@/lib/backend-api";
+import { useStoreCategories } from "@/lib/use-store-categories";
 
 type Notification = {
   id: string;
@@ -27,6 +28,8 @@ export function SiteHeader() {
   const pathname = usePathname();
   const locale = pathname.split("/").filter(Boolean)[0] === "en" ? "en" : "fr";
   const localized = (path: string) => `/${locale}${path}`;
+  const categories = useStoreCategories();
+  const categoryLinks = categories.map((category) => <Link key={category.slug} href={localized(`/boutique/${category.slug}`)}>{locale === "en" ? category.nameEn : category.nameFr}</Link>);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [storePhone, setStorePhone] = useState("");
   useEffect(() => {
@@ -85,11 +88,7 @@ export function SiteHeader() {
           >
             Home
           </Link>
-          <Link href={localized("/boutique?categorie=homme")}>Homme</Link>
-          <Link href={localized("/boutique?categorie=femme")}>Femme</Link>
-          <Link href={localized("/boutique?categorie=nouveautes")}>
-            Nouveautés
-          </Link>
+          {categoryLinks}
           <Link href={localized("/notre-histoire")}>Notre histoire</Link>
         </nav>
         <div className="header-actions">
@@ -156,11 +155,7 @@ export function SiteHeader() {
               </SheetHeader>
               <nav className="mobile-nav" aria-label="Navigation mobile">
                 <Link href={localized("/")}>Home</Link>
-                <Link href={localized("/boutique?categorie=homme")}>Homme</Link>
-                <Link href={localized("/boutique?categorie=femme")}>Femme</Link>
-                <Link href={localized("/boutique?categorie=nouveautes")}>
-                  Nouveautés
-                </Link>
+                {categoryLinks}
                 <Link href={localized("/notre-histoire")}>Notre histoire</Link>
               </nav>
               <div className="mobile-nav-footer">
