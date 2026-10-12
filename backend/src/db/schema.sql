@@ -189,6 +189,8 @@ CREATE TABLE IF NOT EXISTS "Order" (
   createdAt       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updatedAt       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+-- Canal de la commande : WEB (tunnel de commande) ou WHATSAPP (commande conclue dans la conversation).
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'WEB' CHECK (channel IN ('WEB', 'WHATSAPP'));
 CREATE INDEX IF NOT EXISTS idx_order_status ON "Order"(status);
 CREATE INDEX IF NOT EXISTS idx_order_user ON "Order"(userId);
 CREATE INDEX IF NOT EXISTS idx_order_guest_phone ON "Order"(guestPhone);

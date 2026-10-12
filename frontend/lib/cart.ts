@@ -14,6 +14,10 @@ export type CartItem = {
 export const CART_COOKIE = "kemi-cart";
 export const PREFERENCES_COOKIE = "kemi-preferences";
 export const CART_UPDATED_EVENT = "kemi-cart-updated";
+/** Émis à chaque ajout au panier (détail : CartAddedDetail) : alimente le toast « Ajouté au panier ». */
+export const CART_ITEM_ADDED_EVENT = "kemi-cart-item-added";
+
+export type CartAddedDetail = { name: string; image: string; size: string; color: string; quantity: number; count: number };
 
 function readCookie<T>(name: string, fallback: T): T {
   if (typeof document === "undefined") return fallback;
@@ -46,6 +50,7 @@ export function addToCart(item: Omit<CartItem, "id" | "quantity">, quantity: num
   if (existing) existing.quantity += quantity;
   else items.push({ ...item, id, quantity });
   saveCart(items);
+  window.dispatchEvent(new CustomEvent<CartAddedDetail>(CART_ITEM_ADDED_EVENT, { detail: { name: item.name, image: item.image, size: item.size, color: item.color, quantity, count: items.reduce((total, cartItem) => total + cartItem.quantity, 0) } }));
 }
 
 export function savePreferences(preferences: { size: string; color: string; material: string }) {

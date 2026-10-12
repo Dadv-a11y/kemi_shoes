@@ -294,5 +294,16 @@ const sorted = (await call('GET', '/products?status=active&sort=priceAsc&pageSiz
 results.push({ ok: top.data?.items?.length <= 10 && sorted.every((price, i) => i === 0 || price >= sorted[i - 1]), method: 'GET', path: '/products', status: 200, expected: 'top <= 10, tri croissant respecté', label: 'tri et top côté API', detail: JSON.stringify({ top: top.data?.items?.length, prices: sorted.slice(0, 5) }) });
 await call('GET', '/products?category=nouveautes&status=active', { label: 'filtre Nouveautés (14 jours)' });
 
+// --- commandes WhatsApp : enregistrement public, confirmation de livraison réservée à l'équipe ---
+const waProduct = (await call('GET', '/products?status=active&pageSize=1', { label: 'produit pour commande WhatsApp' })).data?.items?.[0];
+const waSize = waProduct?.sizes?.find((size) => size.available)?.size;
+const wa = await call('POST', '/orders/whatsapp', { body: { items: [{ productId: waProduct?.id, size: waSize, quantity: 1 }] }, expect: 201, label: 'commande WhatsApp (invité)' }); route('POST /orders/whatsapp');
+results.push({ ok: /^KS-\d+/.test(wa.data?.reference ?? '') && wa.data?.total !== undefined || wa.data?.totalFcfa > 0, method: 'POST', path: '/orders/whatsapp', status: wa.status, expected: 'référence + total uniquement', label: 'réponse minimale pour un invité', detail: JSON.stringify(wa.data) });
+await call('POST', '/orders/whatsapp', { body: { items: [] }, expect: 400, label: 'commande WhatsApp sans produit' });
+await call('POST', `/orders/${wa.data?.id}/confirm-delivery`, { expect: 401, label: 'confirmation de livraison sans token' });
+await call('POST', `/orders/${wa.data?.id}/confirm-delivery`, { token: C, expect: 403, label: 'confirmation de livraison refusée au client' });
+const delivered = await call('POST', `/orders/${wa.data?.id}/confirm-delivery`, { token: A, body: {}, label: 'confirmation de livraison (admin)' }); route('POST /orders/:id/confirm-delivery');
+results.push({ ok: delivered.data?.status === 'DELIVERED' && delivered.data?.channel === 'WHATSAPP' && delivered.data?.paymentStatus === 'PAID', method: 'POST', path: '/orders/:id/confirm-delivery', status: delivered.status, expected: 'DELIVERED, PAID, canal WHATSAPP', label: 'commande WhatsApp livrée et soldée', detail: JSON.stringify({ status: delivered.data?.status, paymentStatus: delivered.data?.paymentStatus }) });
+
 console.log(`\n${results.length - failed.length}/${results.length} vérifications OK — ${hit.size} routes couvertes`);
 process.exitCode = failed.length ? 1 : 0;

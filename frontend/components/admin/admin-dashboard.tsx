@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, Eye, Minus, Pencil } from "lucide-react";
 import { backendRequest, hasSession, resolveMediaUrl, uploadProductImage } from "@/lib/backend-api";
 import { TablePagination, usePagination } from "@/components/admin/table-pagination";
 import { TaxonomyManager } from "@/components/admin/taxonomy-manager";
+import { DeliveryConfirmationToasts } from "@/components/admin/delivery-confirmation-toasts";
 import { ProductPreview } from "@/components/admin/product-preview";
 import type { CatalogApiProduct } from "@/lib/catalog-api";
 
@@ -88,8 +89,10 @@ type ApiOrder = {
   totalFcfa: number;
   createdAt: string;
   deliveryZoneId: string;
+  channel?: "WEB" | "WHATSAPP";
+  items?: { productNameFr: string; quantity: number; size?: string }[];
 };
-type AdminOrder = { uuid: string; id: string; client: string; date: string; zone: string; status: OrderStatus; rawStatus: string; total: string };
+type AdminOrder = { uuid: string; id: string; client: string; date: string; zone: string; status: OrderStatus; rawStatus: string; total: string; channel: "WEB" | "WHATSAPP"; createdAt: string; products: string };
 type PaymentTransactionInfo = { id: string; provider: string; reference: string; operatorReference: string | null; operator: string | null; status: string };
 type AdminReview = { id: string; productId: string; rating: number; comment: string; createdAt: string; status: string };
 type ContentPage = { id: string; slug: string; titleFr: string; titleEn?: string | null; bodyFr: string; bodyEn?: string | null };
@@ -343,6 +346,9 @@ function AdminDashboardContent() {
                     : "progress",
               rawStatus: order.status,
             total: `${order.totalFcfa.toLocaleString("fr-FR")}f`,
+            channel: order.channel ?? "WEB",
+            createdAt: order.createdAt,
+            products: (order.items ?? []).map((item) => `${item.productNameFr} × ${item.quantity}`).join(", "),
           })),
         );
           setAdminReviews(reviewResult);
@@ -828,7 +834,7 @@ function AdminDashboardContent() {
                   </div>
                   <TrendIndicator trend={product.trend} className="sm:hidden" />
                   <div className="w-20 shrink-0 text-right text-[11.5px] font-bold">
-                    {product.sales} ventes
+                    {product.sales} vente{product.sales > 1 ? "s" : ""}
                   </div>
                 </div>
               ))}
@@ -988,6 +994,7 @@ function AdminDashboardContent() {
                     <tr key={order.id} className="border-t border-[#E4DDD5]">
                       <td className="px-[14px] py-[12px] font-semibold">
                         {order.id}
+                        {order.channel === "WHATSAPP" && <span className="ml-2 inline-block rounded-full bg-[#e3f4ea] px-2 py-[2px] align-middle text-[9px] font-bold uppercase tracking-[0.04em] text-[#1f7a4d]">WhatsApp</span>}
                       </td>
                       <td className="px-[14px] py-[12px]">{order.client}</td>
                       <td className="px-[14px] py-[12px]">{order.date}</td>
@@ -2139,6 +2146,10 @@ function AdminDashboardContent() {
           </header>
 
           <main className="min-h-0 flex-1 overflow-y-auto">{renderPage()}</main>
+          <DeliveryConfirmationToasts
+            orders={adminOrders.filter((order) => order.channel === "WHATSAPP" && order.rawStatus !== "DELIVERED" && order.rawStatus !== "CANCELLED").map((order) => ({ uuid: order.uuid, reference: order.id, client: order.client, createdAt: order.createdAt, products: order.products }))}
+            onClosed={(uuid, status) => setAdminOrders((current) => current.map((order) => (order.uuid === uuid ? { ...order, rawStatus: status, status: status === "DELIVERED" ? "done" : "cancel" } : order)))}
+          />
         </div>
       </div>
     </div>

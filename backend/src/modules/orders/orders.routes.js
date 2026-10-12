@@ -5,6 +5,7 @@ import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole, optionalAuth } from '../../middleware/auth.js';
 import { audit } from '../../middleware/audit.js';
 import { forbidden } from '../../middleware/errorHandler.js';
+import { whatsappOrderLimiter } from '../../middleware/rateLimit.js';
 
 const itemSchema = z.object({
   productId: z.string().uuid(),
@@ -32,6 +33,13 @@ const createOrderSchema = z.object({
     }),
     paymentMethod: z.enum(['MOBILE_MONEY', 'CARD', 'CASH_ON_DELIVERY']),
     paymentPhone: z.string().min(6).optional(),
+  }),
+});
+
+const whatsappOrderSchema = z.object({
+  body: z.object({
+    items: z.array(itemSchema).min(1).max(30),
+    guest: z.object({ name: z.string().min(1).max(120).optional(), phone: z.string().min(6).max(30).optional() }).optional(),
   }),
 });
 
@@ -85,6 +93,19 @@ const controller = {
     res.json(order);
   },
 
+  async createWhatsapp(req, res) {
+    const order = await service.createWhatsappOrder({ ...req.body, userId: req.user?.id });
+    audit(req, { action: 'order.created', entityType: 'Order', entityId: order.id, metadata: { reference: order.reference, channel: 'WHATSAPP' } });
+    // Seules les informations utiles au message WhatsApp sont renvoyées à un visiteur anonyme.
+    res.status(201).json({ id: order.id, reference: order.reference, totalFcfa: order.totalFcfa });
+  },
+
+  async confirmDelivery(req, res) {
+    const order = await service.confirmDelivery(req.params.id, req.body?.note);
+    audit(req, { action: 'order.delivery_confirmed', entityType: 'Order', entityId: order.id, metadata: { channel: order.channel } });
+    res.json(order);
+  },
+
   async updateStatus(req, res) {
     const order = await service.updateOrderStatus(req.params.id, req.body.status, req.body.note);
     audit(req, { action: 'order.status_changed', entityType: 'Order', entityId: order.id, metadata: { status: req.body.status } });
@@ -108,9 +129,12 @@ const router = Router();
 const isStaff = requireRole('ADMIN', 'PRODUCT_MANAGER');
 
 router.post('/', optionalAuth, validate(createOrderSchema), controller.create); // invité ou connecté
+// Commande annoncée par WhatsApp (enregistrée pour le suivi) : limitée par IP, comme l'envoi de codes.
+router.post('/whatsapp', whatsappOrderLimiter, optionalAuth, validate(whatsappOrderSchema), controller.createWhatsapp);
 router.get('/me', requireAuth, validate(myOrdersSchema), controller.myOrders);
 router.get('/', requireAuth, isStaff, validate(listOrdersSchema), controller.list);
 router.get('/:id', requireAuth, validate(orderIdSchema), controller.getById);
+router.post('/:id/confirm-delivery', requireAuth, isStaff, validate(orderIdSchema), controller.confirmDelivery);
 router.patch('/:id/status', requireAuth, isStaff, validate(updateStatusSchema), controller.updateStatus);
 router.patch('/:id/note', requireAuth, isStaff, validate(noteSchema), controller.setNote);
 

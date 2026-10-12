@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import type { CatalogFacets } from "@/lib/catalog-api";
+import { markShopScroll } from "@/lib/shop-scroll";
 
 type Labels = { trigger: string; title: string; sort: string; newest: string; priceAsc: string; priceDesc: string; popular: string; size: string; color: string; price: string; reset: string; results: string; activeFilter: string };
 export type ShopFilters = { sort: "popular" | "newest" | "priceAsc" | "priceDesc"; size?: string; color?: string; minPrice?: number; maxPrice?: number };
@@ -59,6 +60,7 @@ export function CatalogFilters({ labels, facets, basePath, current }: { labels: 
 
   const go = (filters: ShopFilters) => {
     const search = filtersToSearch(filters).toString();
+    markShopScroll();
     router.push(`${basePath}${search ? `?${search}` : ""}#shop-results`, { scroll: false });
   };
 

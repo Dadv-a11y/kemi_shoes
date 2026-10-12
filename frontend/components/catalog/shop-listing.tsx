@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { ScrollToResults } from "@/components/catalog/scroll-to-results";
+import { ShopTabLink } from "@/components/catalog/shop-tab-link";
 import { CatalogFilters, type ShopFilters } from "@/components/catalog/catalog-filters";
 import { ProductCard } from "@/components/catalog/product-card";
 import { getI18n } from "@/locales/server";
@@ -43,17 +46,18 @@ export async function ShopListing({ locale, category, collection, search, title,
 
   return (
     <main className="shop-page">
+      <Suspense fallback={null}><ScrollToResults /></Suspense>
       <section className="shop-intro section">
         <span className="eyebrow">KEMI SHOES</span>
         <h1>{title}</h1>
         {intro && <p>{intro}</p>}
       </section>
       <nav className="shop-tabs" aria-label={t("catalog.categoriesLabel")}>
-        <Link href={`/${locale}/boutique#shop-results`} className={cn("shop-tab", !category && !collection && "shop-tab-active")}>{t("catalog.categories.tous")}</Link>
+        <ShopTabLink href={`/${locale}/boutique#shop-results`} className={cn("shop-tab", !category && !collection && "shop-tab-active")}>{t("catalog.categories.tous")}</ShopTabLink>
         {categories.map((item) => (
-          <Link key={item.slug} href={`/${locale}/boutique/${item.slug}#shop-results`} className={cn("shop-tab", category === item.slug && "shop-tab-active")}>
+          <ShopTabLink key={item.slug} href={`/${locale}/boutique/${item.slug}#shop-results`} className={cn("shop-tab", category === item.slug && "shop-tab-active")}>
             {locale === "en" ? item.nameEn : item.nameFr}
-          </Link>
+          </ShopTabLink>
         ))}
         <CatalogFilters
           basePath={basePath}

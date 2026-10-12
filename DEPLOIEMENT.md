@@ -599,3 +599,14 @@ Les comptes créés avant cette fonction doivent confirmer leur adresse à la pr
   3 collections contiennent au moins un produit publié (meilleure vente de chacune), et `/collections/<slug>` liste leurs produits.
 - **Tendances du moment** (accueil) : les 4 premiers produits du top 10 des ventes (`GET /products/top`).
 - **Aperçu du formulaire produit** : le back-office embarque la page `/apercu-produit` (rendu réel de la carte et de la fiche, largeur mobile ou ordinateur).
+
+## 11. Commandes WhatsApp et toasts
+
+- **Bouton « Commander sur WhatsApp »** (fiche produit et panier) : enregistre une commande de canal `WHATSAPP` (`POST /api/v1/orders/whatsapp`, limité à
+  30 par heure et par IP, paiement à la remise, frais de livraison à 0 tant que l'adresse n'est pas connue), puis ouvre WhatsApp avec le message prêt :
+  référence, un bloc par produit (taille, couleur, prix) **avec le lien de sa fiche**, et le total. Si l'enregistrement échoue, le message part sans référence.
+  Le numéro vient de Admin › Paramètres › WhatsApp. Une zone de livraison active est nécessaire.
+- **Admin** : une commande WhatsApp ouverte depuis plus de 24 h déclenche un toast « Les produits ont-ils bien été livrés ? » (Oui, livrée / Pas encore, qui
+  repousse de 24 h / Annulée). « Oui » appelle `POST /api/v1/orders/:id/confirm-delivery` : étapes restantes parcourues, paiement à la remise soldé.
+- **Boutique** : un clic sur un onglet (catégorie, collection) ou un filtre fait défiler jusqu'à la liste de produits ; le bouton « + » des cartes (ajout rapide,
+  choix de la taille) affiche un toast en haut de l'écran avec le produit, le nombre d'articles du panier et « Commander » — masqué sur le panier et les fiches produit.

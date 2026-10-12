@@ -52,26 +52,8 @@ export async function transitionStatus(orderId, newStatus, note) {
   await run(`INSERT INTO OrderStatusEvent (id, orderId, status, note) VALUES (?, ?, ?, ?)`, [randomUUID(), orderId, newStatus, note ?? null]);
 }
 
-/**
- * Crée une commande à partir d'un panier. Fonctionne aussi bien pour un
- * visiteur invité (guest.name/phone/email) que pour un utilisateur connecté
- * (userId) — jamais de compte obligatoire pour acheter.
- */
-export async function createOrder({ items, deliveryZoneId, address, guest, userId, paymentMethod, paymentPhone }) {
-  if (!items?.length) throw badRequest('Le panier est vide.');
-
-  const zone = await get(`SELECT * FROM DeliveryZone WHERE id = ? AND active = 1`, [deliveryZoneId]);
-  if (!zone) throw notFound('Zone de livraison introuvable ou inactive.');
-
-  const zonePaymentMethods = Array.isArray(zone.paymentMethods) ? zone.paymentMethods : JSON.parse(zone.paymentMethods ?? '[]');
-  if (!zonePaymentMethods.includes(mapPaymentMethodToZoneKey(paymentMethod))) {
-    throw badRequest(`Le moyen de paiement ${paymentMethod} n'est pas disponible pour cette zone.`);
-  }
-  if (paymentMethod === 'CASH_ON_DELIVERY' && !zone.codAvailable) {
-    throw badRequest('Le paiement à la livraison n’est pas disponible pour cette zone.');
-  }
-
-  const resolvedItems = await Promise.all(items.map(async (item) => {
+async function resolveOrderItems(items) {
+  return Promise.all(items.map(async (item) => {
     const product = await get(`SELECT * FROM Product WHERE id = ?`, [item.productId]);
     if (!product) throw notFound(`Produit ${item.productId} introuvable.`);
     if (product.status !== 'active') throw badRequest(`Le produit "${product.nameFr}" n'est plus disponible.`);
@@ -93,6 +75,28 @@ export async function createOrder({ items, deliveryZoneId, address, guest, userI
       customMaterial: item.customMaterial ?? null,
     };
   }));
+}
+
+/**
+ * Crée une commande à partir d'un panier. Fonctionne aussi bien pour un
+ * visiteur invité (guest.name/phone/email) que pour un utilisateur connecté
+ * (userId) — jamais de compte obligatoire pour acheter.
+ */
+export async function createOrder({ items, deliveryZoneId, address, guest, userId, paymentMethod, paymentPhone }) {
+  if (!items?.length) throw badRequest('Le panier est vide.');
+
+  const zone = await get(`SELECT * FROM DeliveryZone WHERE id = ? AND active = 1`, [deliveryZoneId]);
+  if (!zone) throw notFound('Zone de livraison introuvable ou inactive.');
+
+  const zonePaymentMethods = Array.isArray(zone.paymentMethods) ? zone.paymentMethods : JSON.parse(zone.paymentMethods ?? '[]');
+  if (!zonePaymentMethods.includes(mapPaymentMethodToZoneKey(paymentMethod))) {
+    throw badRequest(`Le moyen de paiement ${paymentMethod} n'est pas disponible pour cette zone.`);
+  }
+  if (paymentMethod === 'CASH_ON_DELIVERY' && !zone.codAvailable) {
+    throw badRequest('Le paiement à la livraison n’est pas disponible pour cette zone.');
+  }
+
+  const resolvedItems = await resolveOrderItems(items);
 
   const subtotalFcfa = resolvedItems.reduce((sum, i) => sum + i.unitPriceFcfa * i.quantity, 0);
   const totalFcfa = subtotalFcfa + zone.feeFcfa;
@@ -246,4 +250,53 @@ export async function listOrders({ status, deliveryZoneId, userId, page = 1, pag
     Promise.all(items.map(hydrateOrder)),
   ]);
   return { items: hydratedItems, total: Number(total), page, pageSize };
+}
+
+/**
+ * Commande annoncée par WhatsApp : l'enregistrer permet à l'équipe de la suivre (et de confirmer la livraison).
+ * Le client n'a rien saisi de plus que son panier : les coordonnées sont complétées dans la conversation, la
+ * livraison se règle à la remise (frais non connus, donc 0) et aucun paiement en ligne n'est lancé.
+ */
+export async function createWhatsappOrder({ items, userId, guest }) {
+  if (!items?.length) throw badRequest('Le panier est vide.');
+  const zone = await get(`SELECT id FROM DeliveryZone WHERE active = 1 ORDER BY createdAt ASC LIMIT 1`);
+  if (!zone) throw badRequest('Aucune zone de livraison active : commande WhatsApp impossible pour le moment.');
+  const resolvedItems = await resolveOrderItems(items);
+  const subtotalFcfa = resolvedItems.reduce((sum, item) => sum + item.unitPriceFcfa * item.quantity, 0);
+  const orderId = randomUUID();
+  const reference = await nextReference();
+  await transaction(async ({ query }) => {
+    await query(
+      `INSERT INTO "Order" (id, reference, userId, guestName, guestPhone, deliveryZoneId, addressCountry, addressCity, addressStreet,
+         paymentMethod, subtotalFcfa, deliveryFeeFcfa, totalFcfa, channel)
+       VALUES (?, ?, ?, ?, ?, ?, 'Cameroun', 'À confirmer', 'À confirmer par WhatsApp', 'CASH_ON_DELIVERY', ?, 0, ?, 'WHATSAPP')`,
+      [orderId, reference, userId ?? null, guest?.name || 'Client WhatsApp', guest?.phone || 'À confirmer', zone.id, subtotalFcfa, subtotalFcfa]
+    );
+    for (const item of resolvedItems) {
+      await query(
+        `INSERT INTO OrderItem (id, orderId, productId, productNameFr, unitPriceFcfa, quantity, size, color, customColor, customMaterial)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [randomUUID(), orderId, item.productId, item.productNameFr, item.unitPriceFcfa, item.quantity, item.size, item.color, item.customColor, item.customMaterial]
+      );
+    }
+    await query(`INSERT INTO OrderStatusEvent (id, orderId, status, note) VALUES (?, ?, 'PENDING', 'Commande annoncée par WhatsApp')`, [randomUUID(), orderId]);
+  });
+  ordersCreatedTotal.inc({ payment_method: 'WHATSAPP' });
+  return getOrderById(orderId);
+}
+
+const DELIVERY_CHAIN = ['PENDING', 'CONFIRMED', 'PREPARING', 'SHIPPED', 'DELIVERED'];
+
+/** Confirmation de livraison par l'équipe : parcourt les étapes restantes et solde le paiement à la remise. */
+export async function confirmDelivery(orderId, note = 'Livraison confirmée par l’équipe') {
+  const order = await get(`SELECT * FROM "Order" WHERE id = ?`, [orderId]);
+  if (!order) throw notFound('Commande introuvable.');
+  if (order.status === 'CANCELLED') throw conflict('Cette commande est annulée.');
+  for (const step of DELIVERY_CHAIN.slice(DELIVERY_CHAIN.indexOf(order.status) + 1)) {
+    await updateOrderStatus(orderId, step, step === 'DELIVERED' ? note : undefined);
+  }
+  if (order.paymentMethod === 'CASH_ON_DELIVERY' && order.paymentStatus !== 'PAID') {
+    await run(`UPDATE "Order" SET paymentStatus = 'PAID' WHERE id = ?`, [orderId]);
+  }
+  return getOrderById(orderId);
 }
